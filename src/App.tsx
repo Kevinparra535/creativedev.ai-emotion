@@ -1,4 +1,4 @@
-import './App.css';
+import "reflect-metadata";
 import Canvas from '@/ui/components/Canvas';
 import { GlobalStyles } from '@/ui/styles/base';
 

@@ -13,8 +13,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "inversify": "^7.10.3",
+    "mobx": "^6.15.0",
+    "mobx-react": "^9.2.1",
+    "mobx-react-lite": "^4.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "reflect-metadata": "^0.2.2",
     "styled-components": "^6.1.19"
   },
   "devDependencies": {
@@ -36,5 +41,18 @@
   },
   "overrides": {
     "vite": "npm:rolldown-vite@7.1.14"
-  }
+  },
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kevinparra535/creativedev.ai-emotion.git"
+  },
+  "keywords": [],
+  "author": "Kevin Parra Lopez <kevinparra535@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Kevinparra535/creativedev.ai-emotion/issues"
+  },
+  "homepage": "https://github.com/Kevinparra535/creativedev.ai-emotion#readme"
 }
