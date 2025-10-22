@@ -3,7 +3,11 @@ import React from 'react';
 type Props = {};
 
 const Canvas = (props: Props) => {
-  return <div>Canvas</div>;
+  return (
+    <main>
+      <input type='text' placeholder='Type something...' />
+    </main>
+  );
 };
 
 export default Canvas;
