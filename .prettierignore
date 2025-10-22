@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# builds / bundles
+/dist
+/build
+/.next
+/.vercel
+
+# tests output
+/coverage
+
+# misc
+.DS_Store
+*.log
+
+# type build info
+**/*.tsbuildinfo
+node_modules/.tmp/
