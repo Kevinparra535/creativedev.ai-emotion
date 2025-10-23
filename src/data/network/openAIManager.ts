@@ -1,7 +1,6 @@
-import OpenAI from 'openai';
+import { injectable } from "inversify";
 
-const openAI = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+@injectable()
+export class OpenAIManager {
 
-export default openAI;
+}

@@ -1,3 +1,7 @@
-const config = {}
+const { OPENAI_API_KEY } = import.meta.env;
 
-export default config
+const config = {
+  OPENAI_API_KEY: OPENAI_API_KEY || ''
+};
+
+export default config;
