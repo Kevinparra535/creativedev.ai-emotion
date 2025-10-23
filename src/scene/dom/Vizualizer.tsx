@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
 import { GrainOverlay, VizualiserRoot } from '@/ui/styles/Vizualiser.styled';
-import type { EmotionResponse } from '@/services/openIAService';
 import { getPresetForEmotion } from '@/config/emotion-presets';
+import type { Emotion } from '@/domain/emotion';
 
 type Props = {
-  emotion: EmotionResponse | null;
+  emotion: Emotion | null;
   analyzing?: boolean;
   intensity?: number; // 0..1
   speed?: number; // 0..1

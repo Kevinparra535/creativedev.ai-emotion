@@ -1,7 +1,7 @@
 import { useControls, button, monitor } from 'leva';
 import { getPresetForEmotion } from '@/config/emotion-presets';
 import { hexToHsl } from '@/utils/color';
-import type { EmotionResponse } from '@/services/openIAService';
+import type { Emotion } from '@/domain/emotion';
 
 export type LevaValues = {
   style: string;
@@ -12,7 +12,7 @@ export type LevaValues = {
 };
 
 export const useEmotionLeva = (
-  emotion: EmotionResponse | null,
+  emotion: Emotion | null,
   reading: boolean,
   analyzing: boolean
 ): LevaValues => {

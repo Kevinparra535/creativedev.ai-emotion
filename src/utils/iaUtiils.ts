@@ -19,21 +19,55 @@ export type MultiEmotionResult = {
 export const promptToService = (): { role: string; content: string } => {
   return {
     role: 'system',
-    content:
-      'Eres un analizador emocional. Devuelve SOLO JSON válido con este formato: {"emotions":[{"label":"joy","weight":0.62,"valence":0.8,"arousal":0.6,"colors":["#FFD54F"],"intensity":0.7}],"global":{"valence":0.25,"arousal":0.55},"pairs":[["joy","nostalgia"],["love","gratitude"]]}'
+    content: [
+      'Eres un analizador emocional. Responde ÚNICAMENTE con JSON válido UTF-8 sin comentarios ni texto extra.',
+      'Formato estricto (version=1):',
+      '{',
+      '  "version": 1,',
+      '  "emotions": [',
+      '    {',
+      '      "label": "joy",                  // string en minúsculas, sin espacios',
+      '      "weight": 0.62,                 // [0,1]',
+      '      "valence": 0.80,                // [-1,1]  (negativo=aversion, positivo=agrado)',
+      '      "arousal": 0.60,                // [0,1]   (0=calma, 1=alta activación)',
+      '      "intensity": 0.70,              // [0,1]',
+      '      "colors": ["#FFD54F"],          // array opcional de hex válidos #RRGGBB',
+      '      "relations": ["nostalgia","gratitude","love","surprise","calm"] // opcional',
+      '    }',
+      '  ],',
+      '  "global": {                         // resumen del texto',
+      '    "valence": 0.25,                  // [-1,1]',
+      '    "arousal": 0.55                   // [0,1]',
+      '  },',
+      '  "pairs": [                          // co-ocurrencias/relaciones fuertes ENTRE labels del array emotions',
+      '    ["joy","nostalgia"],',
+      '    ["love","gratitude"]',
+      '  ]',
+      '}',
+      '',
+      'Reglas:',
+      '- Devuelve hasta 8 emociones ya ordenadas por weight DESC.',
+      "- Todas las etiquetas de 'pairs' DEBEN existir en 'emotions.label'.",
+      '- Usa punto decimal; no uses NaN/Infinity ni null si puedes evitarlo.',
+      '- Rango estricto: valence [-1,1], arousal [0,1], intensity [0,1], weight [0,1].',
+      '- Si una emoción es implícita, inclúyela con weight bajo (p.ej. 0.15–0.35).',
+      '- No incluyas campos adicionales fuera del esquema.',
+      '- Responde SOLO el JSON (sin markdown, sin explicación).'
+    ].join('\n')
   };
 };
 
 export const promptToUser = (text: string) => {
   return {
     role: 'user',
-    content: `Analiza el siguiente texto.
-              - Devuelve hasta 8 emociones en "emotions" ordenadas por weight (0..1).
-              - "pairs" son co-ocurrencias o relaciones semánticas fuertes.
-              - Si una emoción está implícita por contexto (p.ej., nostalgia con recuerdo), inclúyela con weight bajo.
-
-              Texto: ${text}
-            `
+    content: [
+      'Analiza el siguiente texto y devuelve el JSON según el esquema indicado.',
+      '- Identifica hasta 8 emociones (ordenadas por weight).',
+      '- Si hay señales contextuales (p. ej. recuerdo → nostalgia), puedes incluir emociones implícitas con weight bajo.',
+      "- En 'pairs', coloca co-ocurrencias/relaciones semánticas fuertes SOLO entre labels presentes en 'emotions'.",
+      '',
+      `Texto: ${text}`
+    ].join('\n')
   };
 };
 

@@ -1,5 +1,7 @@
 import type { Emotion } from '@/domain/emotion';
 import { expandFromDominant, type MultiEmotionResult } from '@/utils/iaUtiils';
+import { OpenIAAdapter } from '@/services/OpenIAAdapter';
+/* eslint-disable complexity, no-negated-condition */
 
 export type UniverseNode = {
   label: string;
@@ -151,12 +153,21 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
 
   return { nodes, edges, summary };
 }
-function analyzeTextMulti(
-  s: string
-): MultiEmotionResult | PromiseLike<MultiEmotionResult | null> | null {
-  throw new Error('Function not implemented.');
+
+async function analyzeTextMulti(s: string): Promise<MultiEmotionResult | null> {
+  // Use the adapter single analyze and expand to a multi as a simple implementation
+  try {
+    const emo = await OpenIAAdapter.analyze(s);
+    return expandFromDominant(emo);
+  } catch {
+    return null;
+  }
 }
 
-function analyzeText(s: string): any {
-  throw new Error('Function not implemented.');
+export async function analyzeText(s: string): Promise<Emotion | null> {
+  try {
+    return await OpenIAAdapter.analyze(s);
+  } catch {
+    return null;
+  }
 }

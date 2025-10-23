@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { EmotionResponse } from '@/services/openIAService';
-import { analyzeText } from '@/services/openIAService';
+import type { Emotion } from '@/domain/emotion';
+import { analyzeText } from '@/services/universeGraph';
 
 type State = {
-  emotion: EmotionResponse | null;
+  emotion: Emotion | null;
   analyzing: boolean;
   error?: string;
 };

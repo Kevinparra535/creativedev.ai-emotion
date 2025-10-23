@@ -1,9 +1,9 @@
+import type { Emotion } from '@/domain/emotion';
 import { create } from 'zustand';
-import type { EmotionResponse } from '@/services/openIAService';
 
 export type EmotionState = {
-  current: EmotionResponse | null;
-  setCurrent: (e: EmotionResponse | null) => void;
+  current: Emotion | null;
+  setCurrent: (e: Emotion | null) => void;
 };
 
 export const useEmotionStore = create<EmotionState>((set) => ({
