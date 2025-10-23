@@ -8,5 +8,5 @@ export const CanvasRoot = styled.main`
   overflow: hidden;
   min-height: 100dvh;
   background: transparent;
-  backdrop-filter: blur(4px);
+  /* backdrop-filter: blur(4px); */
 `;

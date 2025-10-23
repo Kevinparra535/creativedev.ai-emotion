@@ -48,7 +48,10 @@ const Canvas = () => {
 
   const moveToBottom = useCallback(() => {
     if (!inputRef.current) return;
-    void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
+    void inputControls.start(
+      { y: shiftY },
+      { duration: 0.3, ease: 'easeInOut' }
+    );
   }, [inputControls, shiftY]);
 
   const moveToTop = useCallback(() => {

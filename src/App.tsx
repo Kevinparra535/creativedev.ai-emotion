@@ -7,7 +7,7 @@ function App() {
     <>
       <GlobalStyles />
       <R3FCanvas />
-      {/* <Canvas /> */}
+      <Canvas />
     </>
   );
 }
