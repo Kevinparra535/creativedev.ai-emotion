@@ -25,6 +25,14 @@ const PRESETS: Record<string, VisualPreset> = {
   enojo: { colors: ['#D7263D', '#8B0000'], motion: 'pulse', particles: 'sparks' },
   anger: { colors: ['#D7263D', '#8B0000'], motion: 'pulse', particles: 'sparks' },
 
+  // Amor / Love
+  amor: { colors: ['#FF6FAE', '#FF3D67'], motion: 'expand', particles: 'dense-up' },
+  love: { colors: ['#FF6FAE', '#FF3D67'], motion: 'expand', particles: 'dense-up' },
+
+  // Sorpresa / Surprise
+  sorpresa: { colors: ['#FFE66D', '#9B5DE5'], motion: 'recoil', particles: 'sparks' },
+  surprise: { colors: ['#FFE66D', '#9B5DE5'], motion: 'recoil', particles: 'sparks' },
+
   // Nostalgia
   nostalgia: { colors: ['#C2A878', '#7E6B5A'], motion: 'recoil', particles: 'grain' },
 

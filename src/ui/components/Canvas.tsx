@@ -18,6 +18,7 @@ import { useEmotionEngine } from '@/hooks/useEmotionEngine';
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import config from '@/config/config';
 import { spacing } from '../styles/scssTokens';
+import { useEmotionStore } from '@/stores/emotionStore';
 
 const AnimShape = styled(motion.div)`
   position: absolute;
@@ -44,7 +45,12 @@ const Canvas = () => {
   const controls = useAnimationControls();
   const inputControls = useAnimationControls();
 
-  const { analyzing } = useEmotionEngine(text, 400);
+  const { emotion, analyzing } = useEmotionEngine(text, 400);
+  const setCurrentEmotion = useEmotionStore((s) => s.setCurrent);
+
+  useEffect(() => {
+    setCurrentEmotion(emotion ?? null);
+  }, [emotion, setCurrentEmotion]);
 
   const moveToBottom = useCallback(() => {
     if (!inputRef.current) return;

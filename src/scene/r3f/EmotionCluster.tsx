@@ -8,7 +8,7 @@ type Props = {
   position?: [number, number, number];
 };
 
-const EmotionCluster = ({ name, color, position }: Props) => {
+const EmotionCluster = ({ color, position }: Props) => {
   const ref = useRef<THREE.Mesh>(null!);
 
   useFrame(({ clock }) => {
