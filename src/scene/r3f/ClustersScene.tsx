@@ -204,6 +204,62 @@ function OrbitingSatellite({
   );
 }
 
+// Pulsing "neuron" traveling along a quadratic bezier from A -> B
+function EnergyPulse({
+  a,
+  b,
+  ctrl,
+  colorA,
+  colorB,
+  speed = 0.35,
+  size = 0.08,
+  phase = 0
+}: Readonly<{
+  a: THREE.Vector3;
+  b: THREE.Vector3;
+  ctrl: THREE.Vector3;
+  colorA: string;
+  colorB: string;
+  speed?: number;
+  size?: number;
+  phase?: number;
+}>) {
+  const ref = useRef<THREE.Mesh>(null);
+  const tRef = useRef(phase % 1);
+  const cA = useMemo(() => new THREE.Color(colorA), [colorA]);
+  const cB = useMemo(() => new THREE.Color(colorB), [colorB]);
+
+  useFrame((_, delta) => {
+    tRef.current += speed * delta;
+    if (tRef.current > 1) tRef.current -= 1;
+    const t = tRef.current;
+    const one = 1 - t;
+    const p = new THREE.Vector3()
+      .copy(a)
+      .multiplyScalar(one * one)
+      .add(new THREE.Vector3().copy(ctrl).multiplyScalar(2 * one * t))
+      .add(new THREE.Vector3().copy(b).multiplyScalar(t * t));
+    if (ref.current) {
+      ref.current.position.copy(p);
+      // Lerp color along the path for cohesive gradient pulse
+      const cc = cA.clone().lerp(cB, t);
+      const mat = ref.current.material as THREE.MeshStandardMaterial;
+      mat.color.copy(cc);
+      mat.emissive.copy(cc);
+      // Soft breathing within the pulse
+      const s = size * (0.9 + 0.2 * Math.sin(t * Math.PI * 2));
+      ref.current.scale.setScalar(s);
+    }
+  });
+
+  return (
+    <mesh ref={ref} castShadow>
+      <sphereGeometry args={[1, 12, 12]} />
+      <meshStandardMaterial emissiveIntensity={1} roughness={0.2} metalness={0.05} />
+    </mesh>
+  );
+}
+
 export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout }>) {
   const { layout = 'centers' } = props;
   const clusters = useMemo(() => getClusters(), []);
@@ -360,28 +416,102 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     }
   };
 
+  // Create a smooth quadratic bezier arc between two 3D points in XY plane with slight Z lift
+  const makeArcPoints = (
+    a: THREE.Vector3,
+    b: THREE.Vector3,
+    curvature = 0.3,
+    segments = 64
+  ): THREE.Vector3[] => {
+    const dir = new THREE.Vector3().copy(b).sub(a);
+    const dist = Math.max(1e-4, dir.length());
+    // Perpendicular on XY plane
+    const perp = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
+    const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+    const lift = curvature * dist;
+    const ctrl = new THREE.Vector3().copy(mid).addScaledVector(perp, lift);
+    // Slight z lift to avoid z-fighting
+    ctrl.z += layout === 'arrow' ? 0 : 0.15;
+
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      // Quadratic Bezier: (1-t)^2 A + 2(1-t)t C + t^2 B
+      const one = 1 - t;
+      const p = new THREE.Vector3()
+        .copy(a)
+        .multiplyScalar(one * one)
+        .add(new THREE.Vector3().copy(ctrl).multiplyScalar(2 * one * t))
+        .add(new THREE.Vector3().copy(b).multiplyScalar(t * t));
+      pts.push(p);
+    }
+    return pts;
+  };
+
+  const linkWidthForKind = (kind: Link['kind']): number => {
+    switch (kind) {
+      case 'polarity':
+        return 1.8;
+      case 'transition':
+        return 1.5;
+      case 'cause':
+        return 1.3;
+      case 'function':
+        return 1.4;
+      default:
+        return 1.4;
+    }
+  };
+
+  // Build a per-vertex gradient between two hex colors across N points
+  const gradientColors = (hexA: string, hexB: string, count: number): THREE.Color[] => {
+    const ca = new THREE.Color(hexA);
+    const cb = new THREE.Color(hexB);
+    const arr: THREE.Color[] = [];
+    for (let i = 0; i < count; i++) {
+      const t = count <= 1 ? 0 : i / (count - 1);
+      const c = ca.clone().lerp(cb, t);
+      arr.push(c);
+    }
+    return arr;
+  };
+
   return (
     <group>
       {/* Energy links between main planets (only primaries) */}
       <group>
         {energyLinks.map((el, i) => {
-          const a = mainPositions[el.a];
-          const b = mainPositions[el.b];
-          const color = colorForKind(el.kind);
+          const aPos = mainPositions[el.a];
+          const bPos = mainPositions[el.b];
+          const points = makeArcPoints(aPos, bPos, 0.28, 72);
+          const baseColor = colorForKind(el.kind);
+          const colA = clusters[el.a].colors[0] ?? baseColor;
+          const colB = clusters[el.b].colors[0] ?? baseColor;
+          const vColors = gradientColors(colA, colB, points.length);
           const opacity = Math.min(0.9, 0.22 + el.weight * 0.5);
-          const zLift = layout === 'arrow' ? 0 : 0.1;
-          const p1 = new THREE.Vector3(a.x, a.y, a.z + zLift);
-          const p2 = new THREE.Vector3(b.x, b.y, b.z + zLift);
+          const width = linkWidthForKind(el.kind);
+          // Recompute control point to feed the pulse
+          const dir = new THREE.Vector3().copy(bPos).sub(aPos);
+          const perp = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
+          const mid = new THREE.Vector3().addVectors(aPos, bPos).multiplyScalar(0.5);
+          const ctrl = new THREE.Vector3().copy(mid).addScaledVector(perp, 0.28 * dir.length());
+          ctrl.z += 0.15;
+
+          const key = `energy-${el.kind}-${el.a}-${el.b}-${i}`;
           return (
-            <Line
-              key={`energy-${el.kind}-${el.a}-${el.b}-${i}`}
-              points={[p1, p2]}
-              color={color}
-              lineWidth={1.4}
-              transparent
-              opacity={opacity}
-              depthWrite={false}
-            />
+            <group key={key}>
+              <Line
+                points={points}
+                vertexColors={vColors}
+                lineWidth={width}
+                transparent
+                opacity={opacity}
+                depthWrite={false}
+              />
+              {/* Pulsing neuron(s) traveling from A to B (and a lighter reverse) */}
+              <EnergyPulse a={aPos} b={bPos} ctrl={ctrl} colorA={colA} colorB={colB} speed={0.35 + el.weight * 0.25} size={0.11} phase={(i * 0.17) % 1} />
+              <EnergyPulse a={bPos} b={aPos} ctrl={ctrl} colorA={colB} colorB={colA} speed={0.28 + el.weight * 0.2} size={0.085} phase={(i * 0.41) % 1} />
+            </group>
           );
         })}
       </group>
