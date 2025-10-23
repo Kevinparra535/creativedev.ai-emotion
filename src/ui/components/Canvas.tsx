@@ -16,7 +16,6 @@ import LoaderIndicator from './LoaderIndicator';
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
 
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
-import config from '@/config/config';
 import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
 
@@ -37,7 +36,7 @@ const Canvas = () => {
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
   const [reading, setReading] = useState(false);
-  const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
+  // const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const typingTimer = useRef<number | null>(null);
@@ -52,15 +51,15 @@ const Canvas = () => {
     setCurrentEmotion(emotion ?? null);
   }, [emotion, setCurrentEmotion]);
 
-  const moveToBottom = useCallback(() => {
-    if (!inputRef.current) return;
-    void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
-  }, [inputControls, shiftY]);
+  // const moveToBottom = useCallback(() => {
+  //   if (!inputRef.current) return;
+  //   void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
+  // }, [inputControls, shiftY]);
 
-  const moveToTop = useCallback(() => {
-    if (!inputRef.current) return;
-    void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
-  }, [inputControls]);
+  // const moveToTop = useCallback(() => {
+  //   if (!inputRef.current) return;
+  //   void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
+  // }, [inputControls]);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -72,11 +71,11 @@ const Canvas = () => {
     typingTimer.current = window.setTimeout(() => setReading(false), 700);
   }, []);
 
-  useEffect(() => {
-    const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  // useEffect(() => {
+  //   const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
+  //   window.addEventListener('resize', onResize);
+  //   return () => window.removeEventListener('resize', onResize);
+  // }, []);
 
   // Measure input size on mount and on resize
   useLayoutEffect(() => {
@@ -96,11 +95,11 @@ const Canvas = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (text.length >= config.INPUT_SHIFT_THRESHOLD) moveToBottom();
-    else moveToTop();
-    // re-run when shiftY changes so position stays consistent across resizes
-  }, [text, shiftY, moveToBottom, moveToTop]);
+  // useEffect(() => {
+  //   if (text.length >= config.INPUT_SHIFT_THRESHOLD) moveToBottom();
+  //   else moveToTop();
+  //   // re-run when shiftY changes so position stays consistent across resizes
+  // }, [text, shiftY, moveToBottom, moveToTop]);
 
   // Typing indicator debounce: show while user types, hide after idle
   useEffect(() => {
@@ -176,7 +175,7 @@ const Canvas = () => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          flexDirection: 'column',
+          flexDirection: 'column'
         }}
       >
         <LoaderIndicator reading={reading || analyzing} />

@@ -49,5 +49,21 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
     },
+  },
+  // Overrides for R3F scene files: allow three.js JSX props and TS ergonomics
+  {
+    files: ["src/scene/r3f/**/*.{ts,tsx}"],
+    rules: {
+      "react/no-unknown-property": "off",
+      "react/prop-types": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  // Specific utility file uses permissive parsing of external JSON
+  {
+    files: ["src/utils/iaUtiils.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
   }
 );

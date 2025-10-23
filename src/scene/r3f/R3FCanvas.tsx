@@ -2,7 +2,7 @@ import { Canvas, extend } from '@react-three/fiber';
 import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import { CameraControls, PerspectiveCamera, Stars, Text } from '@react-three/drei';
+import { CameraControls, PerspectiveCamera, Stars } from '@react-three/drei';
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 import ClustersScene from './ClustersScene';
 
@@ -28,7 +28,7 @@ const R3FCanvas = () => {
         alpha: true,
         powerPreference: 'high-performance'
       }}
-      camera={{ fov: 45, near: 0.1, far: 100, position: [0, 0, 6] }}
+      camera={{ fov: 45, near: 0.1, far: 100, position: [0, 0, 100] }}
       frameloop='always'
       onCreated={(state) => {
         state.gl.setClearColor(new THREE.Color(0x000000), 0);
@@ -38,23 +38,10 @@ const R3FCanvas = () => {
         <ambientLight intensity={0.35} />
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
         <directionalLight position={[-2, -3, -5]} intensity={0.8} castShadow />
-        {/* Variation A: fixed centers from cluster config */}
-        <Text
-          position={[0, 3.6, 0]}
-          fontSize={0.26}
-          color={'#ccd'}
-          anchorX='center'
-          anchorY='bottom'
-        >
-          clusters: centers
-        </Text>
-        <ClustersScene layout='centers' />
 
-        <PerspectiveCamera
-          makeDefault
-          position={[0.265, 0.672, 17.016]}
-          // rotation={[-0.038, 0.064, 0.002]}
-        />
+        <ClustersScene layout='arrow' />
+
+        <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls />
 
         <EffectComposer>
