@@ -3,7 +3,7 @@ import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import UniverseScene from './UniverseScene';
-import { OrbitControls, OrthographicCamera } from '@react-three/drei';
+import { CameraControls, PerspectiveCamera } from '@react-three/drei';
 
 extend({ UnrealBloomPass });
 
@@ -19,7 +19,7 @@ const R3FCanvas = () => {
 
   return (
     <Canvas
-      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'auto' }}
       dpr={dpr}
       shadows
       gl={{
@@ -37,8 +37,8 @@ const R3FCanvas = () => {
         <ambientLight intensity={0.35} />
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
         <UniverseScene />
-        <OrthographicCamera makeDefault far={100} near={0.1} position={[-10, 2, -10]} zoom={110} />
-        <OrbitControls enableZoom={false} />
+        <PerspectiveCamera makeDefault position={[0, 0, 18.5]} />
+        <CameraControls minPolarAngle={0} maxPolarAngle={Math.PI / 1.6} />
       </Suspense>
     </Canvas>
   );

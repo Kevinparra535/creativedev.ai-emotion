@@ -1,17 +1,10 @@
-import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useMemo, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Line, Text } from '@react-three/drei';
 import { getPresetForEmotion } from '@/config/emotion-presets';
 import { useEmotionStore } from '@/stores/emotionStore';
 
-type Props = {
-  baseColor: string;
-  radius: number;
-  speed: number;
-  size: number;
-  phase?: number;
-};
+// Note: satellites/planets are disabled in structure-only mode
 
 const PRIMARY: string[] = [
   'love',
@@ -66,31 +59,7 @@ function colorFor(label: string) {
   ];
 }
 
-function Satellite({ baseColor, radius, speed, size, phase = 0 }: Readonly<Props>) {
-  const ref = useRef<THREE.Group>(null!);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime() * speed + phase;
-    const x = Math.cos(t) * radius;
-    const z = Math.sin(t) * radius;
-    ref.current.position.set(x, 0, z);
-  });
-
-  return (
-    <group ref={ref}>
-      <mesh>
-        <sphereGeometry args={[size, 24, 24]} />
-        <meshStandardMaterial
-          color={baseColor}
-          emissive={baseColor}
-          emissiveIntensity={0.4}
-          roughness={0.6}
-          metalness={0.05}
-        />
-      </mesh>
-    </group>
-  );
-}
+// Note: Satellite component removed in structure-only mode to avoid unused code
 
 export default function UniverseScene() {
   const current = useEmotionStore((s) => s.current);
@@ -112,23 +81,83 @@ export default function UniverseScene() {
     return map;
   }, [nodes]);
 
-  // Derive dynamics from current emotion
+  // Derive current emotion basics
   const activeLabel = current?.label?.toLowerCase();
-  const arousal = current?.arousal ?? 0.3; // 0..1
-  const valence = current?.valence ?? 0; // -1..1
   const activeColors = current?.colors && current.colors.length > 0 ? current.colors : undefined;
-  const intensity = current?.intensity ?? 0.6;
+  const arousal = current?.arousal ?? 0.3;
+  // Sequential reveal centered on the strongest emotion
+  const [stage, setStage] = useState(0); // 0: center only, 1: add first ring
+  useEffect(() => {
+    setStage(0);
+    const id = setTimeout(() => setStage(1), 450);
+    return () => clearTimeout(id);
+  }, [activeLabel]);
 
-  // Satellite count/speed from arousal
-  const satCount = Math.max(2, Math.min(7, Math.round(2 + arousal * 6)));
-  const satSpeed = 0.2 + arousal * 0.6;
+  // If we have an active emotion, render centered layout with concentric ring for its relations
+  if (structureOnly && activeLabel) {
+    const centerColor = activeColors?.[0] ?? getPresetForEmotion(activeLabel).colors[0] ?? '#fff';
+    const relationLabels = (current?.relations ?? [])
+      .map((r) => r.toLowerCase())
+      .map((rel) => (nodeIndexByLabel.has(rel) ? rel : (RELATION_ALIAS[rel] ?? rel)))
+      .filter((rel) => rel && rel !== activeLabel);
 
-  // Highlight scale from valence
-  const scaleBase = 1 + Math.abs(valence) * 0.6;
+    const radius = 5 + arousal * 2; // scale by arousal
+    const positions = ringPositions(relationLabels.length || 1, radius, Math.PI / 6);
 
+    return (
+      <group>
+        {/* center label */}
+        <group position={[0, 0, 0]}>
+          <Text
+            fontSize={0.34}
+            color={centerColor}
+            anchorX='center'
+            anchorY='middle'
+            outlineWidth={0.002}
+            outlineColor='#000'
+            fillOpacity={0.95}
+          >
+            {activeLabel}
+          </Text>
+        </group>
+
+        {/* concentric ring (stage >= 1) */}
+        {stage >= 1 &&
+          relationLabels.map((rel, i) => {
+            const p = positions[i] ?? new THREE.Vector3(radius, 0, 0);
+            const col = getPresetForEmotion(rel).colors[0] ?? centerColor;
+            return (
+              <group key={`rel-${rel}-${i}`}>
+                <Line
+                  points={[new THREE.Vector3(0, 0, 0), p]}
+                  color={centerColor}
+                  opacity={0.6}
+                  transparent
+                  lineWidth={1.5}
+                />
+                <group position={p.toArray()}>
+                  <Text
+                    fontSize={0.26}
+                    color={col}
+                    anchorX='center'
+                    anchorY='middle'
+                    outlineWidth={0.002}
+                    outlineColor='#000'
+                    fillOpacity={0.9}
+                  >
+                    {rel}
+                  </Text>
+                </group>
+              </group>
+            );
+          })}
+      </group>
+    );
+  }
+
+  // Fallback: original structural ring (useful if no active emotion yet)
   return (
     <group>
-      {/* structural: neighbor connections (solid lines) */}
       {nodes.map((n, i) => {
         const next = nodes[(i + 1) % nodes.length];
         const c = n.colorA;
@@ -144,121 +173,21 @@ export default function UniverseScene() {
           />
         );
       })}
-
-      {/* structural: opposition connections (dashed across the ring) */}
-      {nodes.map((n, i) => {
-        const opp = nodes[(i + Math.floor(nodes.length / 2)) % nodes.length];
-        const c = n.colorA;
-        return (
-          <Line
-            key={`opp-${n.label}`}
-            points={[n.pos, opp.pos]}
-            color={c}
-            opacity={0.12}
-            transparent
-            lineWidth={0.75}
-            dashed
-            dashSize={0.5}
-            gapSize={0.35}
-          />
-        );
-      })}
-
-      {/* dynamic: relation lines from active to related labels (if present) */}
-      {activeLabel && current?.relations?.length
-        ? current.relations
-            .map((rel) => rel.toLowerCase())
-            .map((rel) => (nodeIndexByLabel.has(rel) ? rel : RELATION_ALIAS[rel]))
-            .filter(
-              (rel): rel is string =>
-                !!rel && nodeIndexByLabel.has(rel) && nodeIndexByLabel.has(activeLabel)
-            )
-            .map((rel, idx) => {
-              const from = nodeIndexByLabel.get(activeLabel!);
-              const to = nodeIndexByLabel.get(rel)!;
-              if (from == null || to == null) return null;
-              const A = nodes[from];
-              const B = nodes[to];
-              const col = activeColors?.[0] ?? A.colorA;
-              return (
-                <Line
-                  key={`rel-${rel}-${idx}`}
-                  points={[A.pos, B.pos]}
-                  color={col}
-                  opacity={0.6}
-                  transparent
-                  lineWidth={1.75}
-                  dashed={false}
-                />
-              );
-            })
-        : null}
-
-      {structureOnly
-        ? // labels only (no spheres)
-          nodes.map((n) => (
-            <group key={`label-${n.label}`} position={n.pos.toArray()}>
-              <Text
-                fontSize={0.26}
-                color={n.colorA}
-                anchorX='center'
-                anchorY='middle'
-                outlineWidth={0.002}
-                outlineColor='#000'
-                fillOpacity={0.9}
-              >
-                {n.label}
-              </Text>
-            </group>
-          ))
-        : // full planets + satellites
-          nodes.map((n) => {
-            const isActive =
-              activeLabel === n.label || (activeLabel && n.label.includes(activeLabel));
-            const scale = isActive ? scaleBase : 1;
-            const emissive = isActive ? Math.min(1, 0.45 + intensity * 0.7) : 0.35;
-            const color = isActive && activeColors ? (activeColors[0] ?? n.colorA) : n.colorA;
-            const secondary =
-              isActive && activeColors
-                ? (activeColors[1] ?? activeColors[0] ?? n.colorB)
-                : n.colorB;
-            return (
-              <group key={n.label} position={n.pos.toArray()}>
-                {/* planet */}
-                <mesh scale={scale} castShadow receiveShadow>
-                  <sphereGeometry args={[0.85, 48, 48]} />
-                  <meshStandardMaterial
-                    color={color}
-                    emissive={color}
-                    emissiveIntensity={emissive}
-                    roughness={0.45}
-                    metalness={0.2}
-                  />
-                </mesh>
-
-                {/* halo */}
-                <mesh>
-                  <sphereGeometry args={[1.1, 32, 32]} />
-                  <meshBasicMaterial color={color} transparent opacity={isActive ? 0.12 : 0.06} />
-                </mesh>
-
-                {/* satellites (only on active) */}
-                {isActive &&
-                  new Array(satCount)
-                    .fill(0)
-                    .map((_, i) => (
-                      <Satellite
-                        key={`sat-${i}`}
-                        baseColor={secondary}
-                        radius={1.6 + i * 0.35}
-                        speed={satSpeed * (1 + i * 0.05)}
-                        size={0.1 + i * 0.03}
-                        phase={i * 0.7}
-                      />
-                    ))}
-              </group>
-            );
-          })}
+      {nodes.map((n) => (
+        <group key={`label-${n.label}`} position={n.pos.toArray()}>
+          <Text
+            fontSize={0.26}
+            color={n.colorA}
+            anchorX='center'
+            anchorY='middle'
+            outlineWidth={0.002}
+            outlineColor='#000'
+            fillOpacity={0.9}
+          >
+            {n.label}
+          </Text>
+        </group>
+      ))}
     </group>
   );
 }
