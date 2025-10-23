@@ -291,10 +291,10 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         const ringR = ringRadii[idx]; // increased orbital radius for satellites
   // Note: ellipse aspect now derived from eccentricity per satellite
         const seed = (idx + 1) * Math.PI * 0.27;
-        // Cluster tilt (shared by its satellites)
-        const tiltX = Math.sin(seed * 1.3) * 0.45; // [-0.45..0.45] rad
-        const tiltZ = Math.cos(seed * 0.9) * 0.35; // [-0.35..0.35] rad
-        const euler = new THREE.Euler(tiltX, 0, tiltZ, 'XYZ');
+  // Base cluster tilt (used as mean plane)
+  const tiltX = Math.sin(seed * 1.3) * 0.45; // [-0.45..0.45] rad
+  const tiltZ = Math.cos(seed * 0.9) * 0.35; // [-0.35..0.35] rad
+  const baseEuler = new THREE.Euler(tiltX, 0, tiltZ, 'XYZ');
 
         // Precompute orbit lines (one per satellite)
         const orbitPointsList: THREE.Vector3[][] = [];
@@ -310,8 +310,16 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           const e = 0.05 + 0.2 * eccSeed; // eccentricity ~ [0.05..0.25]
           const theta = (seed * 0.6 + i * 0.9) % (Math.PI * 2); // in-plane rotation
 
-          // Build orbit line
-          orbitPointsList.push(makeOrbitPoints(pos, a, e, theta, euler, layout));
+          // Per-satellite plane variation (small inclination deltas around base)
+          const maxInc = 0.35; // ~20°
+          const incX = (Math.sin(i * 2.13 + idx * 0.77) * 0.5) * maxInc;
+          const incZ = (Math.cos(i * 1.73 + idx * 0.41) * 0.5) * maxInc;
+          const eulerSat = layout === 'arrow'
+            ? baseEuler
+            : new THREE.Euler(baseEuler.x + incX * 0.6, 0, baseEuler.z + incZ * 0.6, 'XYZ');
+
+          // Build orbit line with this satellite plane
+          orbitPointsList.push(makeOrbitPoints(pos, a, e, theta, eulerSat, layout));
 
           // Place satellite on its orbit at phase 'angle'
           const b = a * Math.sqrt(Math.max(0, 1 - e * e));
@@ -322,7 +330,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           const rx = ex * cosT - ey * sinT;
           const ry = ex * sinT + ey * cosT;
           const local = new THREE.Vector3(rx, ry, 0);
-          if (layout !== 'arrow') local.applyEuler(euler);
+          if (layout !== 'arrow') local.applyEuler(eulerSat);
           const px = pos.x + local.x;
           const py = pos.y + local.y;
           const pz = layout === 'arrow' ? pos.z : pos.z + local.z;
