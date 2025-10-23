@@ -1,4 +1,4 @@
-import { VizualiserRoot } from '../styles/Vizualiser.styled';
+import { VizualiserRoot } from '../../ui/styles/Vizualiser.styled';
 
 type Props = Record<string, never>;
 

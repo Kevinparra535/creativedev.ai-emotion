@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import styled from 'styled-components';
 import {  motion, useAnimationControls } from 'framer-motion';
-import PromptInput from './PromptInput';
-import Vizualizer from './Vizualizer';
+import PromptInput from '../../features/prompt/PromptInput';
+import Vizualizer from '../../scene/dom/Vizualizer';
 import LoaderIndicator from './LoaderIndicator';
 
 const AnimShape = styled(motion.div)`
