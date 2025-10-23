@@ -1,4 +1,4 @@
-import type { EmotionResponse } from '@/services/openIAService';
+import type { Emotion } from '@/domain/emotion';
 
 // Multi-emotion types (for graph-ready responses)
 export type MultiEmotionItem = {
@@ -37,7 +37,7 @@ export const promptToUser = (text: string) => {
   };
 };
 
-export function tryParseEmotion(s: string): EmotionResponse | null {
+export function tryParseEmotion(s: string): Emotion | null {
   try {
     const match = /\{[\s\S]*\}/.exec(s);
     const json = match ? match[0] : null;
@@ -93,7 +93,8 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
     const emotions: MultiEmotionItem[] = emotionsRaw
       .map((e) => ({
         label: typeof e.label === 'string' ? e.label.toLowerCase() : undefined,
-        weight: typeof e.weight === 'number' ? e.weight : typeof e.score === 'number' ? e.score : 0,
+        weight:
+          typeof e.weight === 'number' ? e.weight : typeof e.score === 'number' ? e.score : 0,
         valence: typeof e.valence === 'number' ? e.valence : undefined,
         arousal: typeof e.arousal === 'number' ? e.arousal : undefined,
         colors: Array.isArray(e.colors)
@@ -105,15 +106,21 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
       }))
       .filter((e) => e.label && e.weight > 0) as MultiEmotionItem[];
 
-    const global = raw.global && typeof raw.global === 'object' ? {
-      valence: typeof raw.global.valence === 'number' ? raw.global.valence : undefined,
-      arousal: typeof raw.global.arousal === 'number' ? raw.global.arousal : undefined
-    } : undefined;
+    const global =
+      raw.global && typeof raw.global === 'object'
+        ? {
+            valence: typeof raw.global.valence === 'number' ? raw.global.valence : undefined,
+            arousal: typeof raw.global.arousal === 'number' ? raw.global.arousal : undefined
+          }
+        : undefined;
 
     const pairs: [string, string][] = Array.isArray(raw.pairs)
       ? (raw.pairs
           .map((p: any) =>
-            Array.isArray(p) && p.length >= 2 && typeof p[0] === 'string' && typeof p[1] === 'string'
+            Array.isArray(p) &&
+            p.length >= 2 &&
+            typeof p[0] === 'string' &&
+            typeof p[1] === 'string'
               ? [p[0].toLowerCase(), p[1].toLowerCase()]
               : null
           )
@@ -127,7 +134,7 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
 }
 
 // Fallback: expand single dominant into a small multi list using relations
-export function expandFromDominant(d: EmotionResponse): MultiEmotionResult {
+export function expandFromDominant(d: Emotion): MultiEmotionResult {
   const baseW = Math.max(0, Math.min(1, d.intensity ?? d.score ?? 0.6));
   const emotions: MultiEmotionItem[] = [
     {
@@ -145,13 +152,11 @@ export function expandFromDominant(d: EmotionResponse): MultiEmotionResult {
     const w = baseW * (0.25 + 0.25 * (1 - i / rels.length)); // 25–50% decaying
     emotions.push({ label: r, weight: w });
   }
-  const pairs: [string, string][] = emotions
-    .slice(1)
-    .map((e) => [emotions[0].label, e.label]);
+  const pairs: [string, string][] = emotions.slice(1).map((e) => [emotions[0].label, e.label]);
   return { emotions, global: { valence: d.valence, arousal: d.arousal }, pairs };
 }
 
-export function localHeuristic(text: string): EmotionResponse {
+export function localHeuristic(text: string): Emotion {
   const t = text.toLowerCase().trim();
 
   if (!t)

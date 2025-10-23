@@ -1,16 +1,14 @@
-// Lightweight TS-only "schemas" for adapter parsing
+export interface AIEmotionNode {
+  label: string;            // "joy"
+  score?: number;           // confianza
+  valence?: number;         // 0..1 o -1..1 según el proveedor
+  arousal?: number;         // 0..1
+  colors?: string[];        // paleta sugerida
+  intensity?: number;       // 0..1
+  relations?: string[];     // ["nostalgia", "gratitude", ...]
+}
 
-export type OpenAIEmotionJSON = {
-  emotions?: Array<{
-    label?: string;
-    weight?: number;
-    score?: number;
-    valence?: number;
-    arousal?: number;
-    colors?: string[];
-    color?: string[];
-    intensity?: number;
-  }>;
-  global?: { valence?: number; arousal?: number };
-  pairs?: [string, string][];
-};
+export interface AIEmotionPayload {
+  nodes: AIEmotionNode[];
+  edges?: Array<{ source: string; target: string; kind?: string; weight?: number; }>;
+}

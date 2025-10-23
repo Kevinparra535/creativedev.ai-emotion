@@ -59,6 +59,15 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  // Overrides for new UI R3F files
+  {
+    files: ["src/ui/scene/**/*.{ts,tsx}", "src/ui/canvas/**/*.{ts,tsx}"],
+    rules: {
+      "react/no-unknown-property": "off",
+      "react/prop-types": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   // Specific utility file uses permissive parsing of external JSON
   {
     files: ["src/utils/iaUtiils.ts"],

@@ -1,29 +1,13 @@
-// Domain types for emotions and analysis results
+export type Valence = number; // [-1, 1]
+export type Arousal = number; // [0, 1]
+export type Intensity = number; // [0, 1]
 
-export type EmotionResponse = {
-  label: string;
-  score: number;
-  valence: number; // [-1..1]
-  arousal: number; // [0..1]
-  colors: string[];
-  intensity: number; // [0..1]
-  relations: string[];
-};
-
-export type MultiEmotionItem = {
-  label: string;
-  weight: number; // [0..1]
-  valence?: number;
-  arousal?: number;
-  colors?: string[];
-  intensity?: number;
-};
-
-export type MultiEmotionResult = {
-  emotions: MultiEmotionItem[];
-  global?: { valence?: number; arousal?: number };
-  pairs?: [string, string][];
-};
-
-// Layout primitive used across scenes
-export type ClustersLayout = 'centers' | 'affect' | 'arrow';
+export interface Emotion {
+  id: string;
+  label: string; // "joy", "fear", etc.
+  valence: Valence; // -1 (neg) ... 1 (pos)
+  arousal: Arousal; // 0 (calma) ... 1 (activación)
+  intensity?: Intensity; // opcional
+  colorHex?: string; // si viene del motor semántico
+  meta?: Record<string, unknown>;
+}

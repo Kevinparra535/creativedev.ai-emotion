@@ -1,20 +1,56 @@
-import type { MultiEmotionItem, MultiEmotionResult } from '@/domain/emotion';
-import type { UniverseGraph, UniverseNode, UniverseEdge } from '@/domain/galaxy';
+import type { Emotion } from '@/domain/emotion';
+import type { Link, LinkKind } from '@/domain/link';
+import type { AIEmotionPayload } from './schemas';
 
-// Minimal placeholder: assume GraphBuilder handles heavy lifting.
-export function multiEmotionsToGraph(multi: MultiEmotionResult | null): UniverseGraph | null {
-  if (!multi || !multi.emotions?.length) return null;
-  const nodes: UniverseNode[] = multi.emotions.map((e: MultiEmotionItem) => ({
-    label: e.label.toLowerCase(),
-    weight: e.weight,
-    valence: e.valence ?? 0,
-    arousal: e.arousal ?? 0.5,
-    colors: e.colors
+export function mapAIToDomain(input: AIEmotionPayload): { emotions: Emotion[]; links: Link[] } {
+  const emotions: Emotion[] = input.nodes.map((n, i) => ({
+    id: `${n.label}-${i}`,
+    label: n.label,
+    valence: normalizeValence(n.valence), // asegura rango [-1,1]
+    arousal: clamp01(n.arousal ?? 0.5),
+    intensity: clamp01(n.intensity ?? n.score ?? 0.6),
+    colorHex: n.colors?.[0],
+    meta: { score: n.score, colors: n.colors, relations: n.relations }
   }));
-  const edges: UniverseEdge[] = (multi.pairs ?? []).map(([a, b]: [string, string]) => ({ source: a, target: b, weight: 1, type: 'semantic' as const }));
-  const summary = {
-    valence: nodes.length ? nodes.reduce((s: number, n: UniverseNode) => s + n.valence * n.weight, 0) / nodes.length : 0,
-    arousal: nodes.length ? nodes.reduce((s: number, n: UniverseNode) => s + n.arousal * n.weight, 0) / nodes.length : 0.5
-  };
-  return { nodes, edges, summary };
+
+  // Links explícitos si hay
+  const explicit: Link[] = (input.edges ?? []).map((e, i) => ({
+    id: `e${i}`,
+    source: resolveId(emotions, e.source),
+    target: resolveId(emotions, e.target),
+    kind: (e.kind as LinkKind) ?? 'semantic',
+    weight: e.weight ?? 0.5
+  }));
+
+  // Links implícitos por "relations" textuales
+  const implicit: Link[] = [];
+  emotions.forEach((em) => {
+    const rels = (em.meta?.relations as string[]) || [];
+    rels.forEach((r, idx) => {
+      const target = emotions.find((x) => x.label.toLowerCase() === r.toLowerCase());
+      if (target) {
+        implicit.push({
+          id: `r-${em.id}-${idx}`,
+          source: em.id,
+          target: target.id,
+          kind: 'semantic',
+          weight: 0.4
+        });
+      }
+    });
+  });
+
+  return { emotions, links: [...explicit, ...implicit] };
 }
+
+// helpers (clamp, normalize, resolveId)...
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+const normalizeValence = (v?: number) => {
+  if (v === undefined) return 0;
+  // Si viniera 0..1, lo mapeamos a -1..1
+  return v > 1 || v < -1 ? Math.max(-1, Math.min(1, v)) : v * 2 - 1;
+};
+
+const resolveId = (nodes: Emotion[], label: string) =>
+  nodes.find((n) => n.label.toLowerCase() === label.toLowerCase())?.id ?? label;

@@ -1,4 +1,4 @@
-import { analyzeText, analyzeTextMulti, type EmotionResponse } from '@/services/openIAService';
+import type { Emotion } from '@/domain/emotion';
 import { expandFromDominant, type MultiEmotionResult } from '@/utils/iaUtiils';
 
 export type UniverseNode = {
@@ -59,7 +59,7 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
   // For each sentence, try multi-emotion analysis; fallback to single with expansion
   for (const s of sentences) {
     if (!s) continue;
-  let multi: MultiEmotionResult | null = null;
+    let multi: MultiEmotionResult | null = null;
     try {
       multi = await analyzeTextMulti(s);
     } catch {
@@ -68,7 +68,7 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
 
     if (!multi || !multi.emotions?.length) {
       // fallback to dominant + expansion
-      let dom: EmotionResponse | null = null;
+      let dom: Emotion | null = null;
       try {
         dom = await analyzeText(s);
       } catch {
@@ -86,14 +86,17 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
       const w = Math.max(0, Math.min(1, e.weight ?? 0));
       if (w <= 0) continue;
       weightMap.set(label, (weightMap.get(label) ?? 0) + w);
-      if (typeof e.valence === 'number') valSum.set(label, (valSum.get(label) ?? 0) + e.valence * w);
-      if (typeof e.arousal === 'number') aroSum.set(label, (aroSum.get(label) ?? 0) + e.arousal * w);
-      if (Array.isArray(e.colors) && e.colors.length && !colorMap.has(label)) colorMap.set(label, e.colors);
+      if (typeof e.valence === 'number')
+        valSum.set(label, (valSum.get(label) ?? 0) + e.valence * w);
+      if (typeof e.arousal === 'number')
+        aroSum.set(label, (aroSum.get(label) ?? 0) + e.arousal * w);
+      if (Array.isArray(e.colors) && e.colors.length && !colorMap.has(label))
+        colorMap.set(label, e.colors);
       labelsInSentence.push(label);
     }
 
     // Global affect (weighted by sum of weights in sentence)
-  const sentW = emos.reduce((acc: number, e) => acc + (e.weight ?? 0), 0);
+    const sentW = emos.reduce((acc: number, e) => acc + (e.weight ?? 0), 0);
     if (multi.global) {
       if (typeof multi.global.valence === 'number') globalVal += multi.global.valence * sentW;
       if (typeof multi.global.arousal === 'number') globalAro += multi.global.arousal * sentW;
@@ -122,8 +125,8 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
   for (const [label, weight] of weightMap) {
     const v = valSum.get(label);
     const a = aroSum.get(label);
-    const normV = v !== undefined ? v / weight : DEFAULT_AFFECT[label]?.valence ?? 0;
-    const normA = a !== undefined ? a / weight : DEFAULT_AFFECT[label]?.arousal ?? 0.5;
+    const normV = v !== undefined ? v / weight : (DEFAULT_AFFECT[label]?.valence ?? 0);
+    const normA = a !== undefined ? a / weight : (DEFAULT_AFFECT[label]?.arousal ?? 0.5);
     const colors = colorMap.get(label);
     nodes.push({ label, weight, valence: normV, arousal: normA, colors });
   }
@@ -132,11 +135,13 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
   const edges: UniverseEdge[] = [];
   for (const [key, w] of coCount) {
     const [a, b] = key.split('|');
-    if (weightMap.has(a) && weightMap.has(b)) edges.push({ source: a, target: b, weight: w, type: 'cooccurrence' });
+    if (weightMap.has(a) && weightMap.has(b))
+      edges.push({ source: a, target: b, weight: w, type: 'cooccurrence' });
   }
   for (const [key, w] of semanticSet) {
     const [a, b] = key.split('|');
-    if (weightMap.has(a) && weightMap.has(b)) edges.push({ source: a, target: b, weight: w, type: 'semantic' });
+    if (weightMap.has(a) && weightMap.has(b))
+      edges.push({ source: a, target: b, weight: w, type: 'semantic' });
   }
 
   const summary = {
@@ -145,4 +150,13 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
   };
 
   return { nodes, edges, summary };
+}
+function analyzeTextMulti(
+  s: string
+): MultiEmotionResult | PromiseLike<MultiEmotionResult | null> | null {
+  throw new Error('Function not implemented.');
+}
+
+function analyzeText(s: string): any {
+  throw new Error('Function not implemented.');
 }

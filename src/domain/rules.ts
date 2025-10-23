@@ -1,12 +1,14 @@
-import type { EmotionResponse } from './emotion';
+import type { Emotion } from './emotion';
+import type { Link } from './link';
 
-export type RuleContext = {
-  text?: string;
-  dominant?: EmotionResponse | null;
-};
-
-export type Rule = {
+export interface Rule {
   id: string;
-  describe: string;
-  apply: (ctx: RuleContext) => Partial<EmotionResponse> | null;
-};
+  name: string;
+  appliesTo(emotion: Emotion, all: Emotion[]): boolean;
+  linkify(emotion: Emotion, all: Emotion[]): Link[]; // genera conexiones dinámicas
+}
+
+export interface RuleSet {
+  id: string;
+  rules: Rule[];
+}
