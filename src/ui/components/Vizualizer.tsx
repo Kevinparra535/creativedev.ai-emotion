@@ -1,9 +1,9 @@
-import React from 'react';
+import { VizualiserRoot } from '../styles/Vizualiser.styled';
 
-type Props = {};
+type Props = Record<string, never>;
 
-const Vizualizer = (props: Props) => {
-  return <div>Vizualizer</div>;
+const Vizualizer = (_props: Props) => {
+  return <VizualiserRoot>Vizualizer</VizualiserRoot>;
 };
 
 export default Vizualizer;

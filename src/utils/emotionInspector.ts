@@ -1,5 +1,5 @@
 import type { EmotionConfig } from '@/config/emotions';
 
-const emotionInspector = (emotion: EmotionConfig) => {};
+const emotionInspector = (_emotion: EmotionConfig) => {};
 
 export default emotionInspector;

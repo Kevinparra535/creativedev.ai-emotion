@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import styled from 'styled-components';
-import { motion, useAnimationControls } from 'framer-motion';
+import {  motion, useAnimationControls } from 'framer-motion';
 import PromptInput from './PromptInput';
 import Vizualizer from './Vizualizer';
+import LoaderIndicator from './LoaderIndicator';
 
 const AnimShape = styled(motion.div)`
   position: absolute;
@@ -23,6 +24,8 @@ const Canvas = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
+  const [reading, setReading] = useState(false);
+  const typingTimer = useRef<number | null>(null);
 
   // Measure input size on mount and on resize
   useLayoutEffect(() => {
@@ -41,6 +44,24 @@ const Canvas = () => {
       window.removeEventListener('resize', measure);
     };
   }, []);
+
+  // Typing indicator debounce: show while user types, hide after idle
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const onType = () => {
+      setReading(true);
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+      typingTimer.current = window.setTimeout(() => setReading(false), 700);
+    };
+    el.addEventListener('input', onType);
+    el.addEventListener('keydown', onType);
+    return () => {
+      el.removeEventListener('input', onType);
+      el.removeEventListener('keydown', onType);
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    };
+  }, [inputRef.current]);
 
   // Run intro animation once size is known
   useEffect(() => {
@@ -87,6 +108,8 @@ const Canvas = () => {
   return (
     <CanvasRoot>
       <Vizualizer />
+
+      <LoaderIndicator reading={reading} />
 
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
