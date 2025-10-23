@@ -4,15 +4,9 @@ import type { Link } from '@/domain/link';
 import { GraphBuilder } from '@/systems/GraphBuilder';
 import { RuleEngine } from '@/systems/RuleEngine';
 import { mapAIToDomain } from '@/data/mappers';
-import {
-  localHeuristic,
-  promptToService,
-  promptToUser,
-  tryParseEmotion,
-  tryParseMulti,
-  expandFromDominant
-} from '@/utils/iaUtiils';
+import { promptToService, promptToUser, tryParseEmotion, tryParseMulti } from '@/utils/iaUtiils';
 import { PayloadZ } from '@/utils/validators';
+import { expandFromDominant, localHeuristic } from '@/config/local-emotions';
 
 function tryParseZodPayload(content: string) {
   try {
