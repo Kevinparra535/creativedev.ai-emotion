@@ -1,3 +1,10 @@
+export type EmotionConfig = {
+  palette: string[];
+  description: string;
+  movement: string[];
+  particles: string[];
+};
+
 const emotions = {
   happy: {
     palette: ['#FFEB3B', '#FFC107', '#FF9800'],
