@@ -23,6 +23,7 @@ export type EmotionResponse = {
 };
 
 export async function analyzeText(text: string): Promise<EmotionResponse> {
+  // return localHeuristic(text);
   if (!config.OPENAI_API_KEY) return localHeuristic(text);
 
   try {
