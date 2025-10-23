@@ -1,5 +1,5 @@
 import { VizualiserRoot } from '../../ui/styles/Vizualiser.styled';
-import type { Emotion } from '@/domain/entities/emotion';
+import type { Emotion } from '@/services/emotion';
 import { getPresetForEmotion } from '@/config/emotion-presets';
 import { motion } from 'framer-motion';
 

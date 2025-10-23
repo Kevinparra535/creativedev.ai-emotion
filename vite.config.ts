@@ -12,7 +12,5 @@ export default defineConfig({
       replacement: './runtimeConfig.browser'
     }
   },
-  define: {
-    'process.env': process.env
-  }
+  // Avoid exposing entire process.env; Vite already injects import.meta.env for VITE_* vars
 });

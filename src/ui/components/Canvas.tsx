@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import styled from 'styled-components';
-import {  motion, useAnimationControls } from 'framer-motion';
+import { motion, useAnimationControls } from 'framer-motion';
 import PromptInput from '../../features/prompt/PromptInput';
 import Vizualizer from '../../scene/dom/Vizualizer';
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
@@ -113,7 +113,7 @@ const Canvas = () => {
     <CanvasRoot>
       <Vizualizer emotion={emotion} analyzing={analyzing} />
 
-  <LoaderIndicator reading={reading || analyzing} />
+      <LoaderIndicator reading={reading || analyzing} />
 
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
