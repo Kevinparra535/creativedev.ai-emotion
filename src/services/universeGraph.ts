@@ -2,7 +2,6 @@ import type { Emotion } from '@/domain/emotion';
 import { expandFromDominant, type MultiEmotionResult } from '@/ai/local-emotions';
 import { emotionService } from '@/services/EmotionServiceFactory';
 import { AFFECT_DEFAULTS } from '@/systems/ClusterEngine';
-/* eslint-disable complexity, no-negated-condition */
 
 export type UniverseNode = {
   label: string;
@@ -72,7 +71,7 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
     }
 
     // Aggregate sentence emotions
-  const emos = multi.emotions.slice(0, 8);
+    const emos = multi.emotions.slice(0, 8);
     const labelsInSentence: string[] = [];
     for (const e of emos) {
       const label = e.label.toLowerCase();
@@ -149,7 +148,7 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
 async function analyzeTextMulti(s: string): Promise<MultiEmotionResult | null> {
   // Use the adapter single analyze and expand to a multi as a simple implementation
   try {
-  const emo = await emotionService.analyze(s);
+    const emo = await emotionService.analyze(s);
     return expandFromDominant(emo);
   } catch {
     return null;
@@ -158,7 +157,7 @@ async function analyzeTextMulti(s: string): Promise<MultiEmotionResult | null> {
 
 export async function analyzeText(s: string): Promise<Emotion | null> {
   try {
-  return await emotionService.analyze(s);
+    return await emotionService.analyze(s);
   } catch {
     return null;
   }

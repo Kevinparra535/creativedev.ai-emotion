@@ -8,7 +8,7 @@ import LinksInstanced from './LinksInstanced';
 import HaloCloud from './HaloCloud';
 
 export default function UniverseScene() {
-  const { emotions, links, setPositions } = useUniverse();
+  const { emotions, setPositions } = useUniverse();
 
   // Calcula posiciones
   const positions = useMemo(() => {

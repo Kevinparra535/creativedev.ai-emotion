@@ -3,12 +3,18 @@ import * as THREE from 'three';
 import { Text, useCursor, Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { getClusters } from '@/config/emotion-clusters';
-import { RuleEngine } from '@/systems/RuleEngine';
-import { EnergyRules } from '@/systems/rules/EnergyRules';
-import type { Emotion } from '@/domain/emotion';
-import type { Link } from '@/domain/link';
+import {
+  makeOrbitPoints,
+  makeArcPoints,
+  gradientColors,
+  linkWidthForKind,
+  relaxMainPositions,
+  computePrimaryEnergyLinks,
+  type ClustersLayout as UtilLayout,
+  type EnergyLinkAgg
+} from '../../utils/sceneUtils';
 
-export type ClustersLayout = 'centers' | 'affect' | 'arrow';
+export type ClustersLayout = UtilLayout;
 
 type PlanetProps = {
   position: THREE.Vector3 | [number, number, number];
@@ -100,38 +106,6 @@ function Planet({
 function jitterZ(seed: number) {
   const r = Math.sin(seed * 12.9898) * 43758.5453;
   return ((r % 1) - 0.5) * 0; // widen depth jitter [-0.6..0.6]
-}
-
-function makeOrbitPoints(
-  center: THREE.Vector3,
-  a: number, // semi-major axis
-  e: number, // eccentricity [0..1)
-  theta: number, // in-plane rotation (argument of periapsis)
-  euler: THREE.Euler, // plane tilt (ignored for 'arrow')
-  layout: ClustersLayout,
-  segments = 96
-) {
-  const pts: THREE.Vector3[] = [];
-  const b = a * Math.sqrt(Math.max(0, 1 - e * e));
-  const c = a * e; // focus distance
-  const cosT = Math.cos(theta);
-  const sinT = Math.sin(theta);
-  for (let s = 0; s <= segments; s++) {
-    const t = (s / segments) * Math.PI * 2;
-    // Ellipse around its center at (c, 0) so the focus is at origin
-    const ex = a * Math.cos(t) + c;
-    const ey = b * Math.sin(t);
-    // In-plane rotation by theta
-    const rx = ex * cosT - ey * sinT;
-    const ry = ex * sinT + ey * cosT;
-    const local = new THREE.Vector3(rx, ry, 0);
-    if (layout !== 'arrow') local.applyEuler(euler);
-    const x = center.x + local.x;
-    const y = center.y + local.y;
-    const z = layout === 'arrow' ? center.z : center.z + local.z;
-    pts.push(new THREE.Vector3(x, y, z));
-  }
-  return pts;
 }
 
 function OrbitLine({ points, color }: Readonly<{ points: THREE.Vector3[]; color: string }>) {
@@ -314,190 +288,32 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   );
 
   // Relax main planets to avoid overlaps between clusters
-  const mainPositions = useMemo(() => {
-    const arr = bases.map((v) => v.clone().multiplyScalar(CENTER_SCALE));
-    const MAIN_PAD = 1;
-    const MAIN_ITERS = 28;
-
-    if (layout !== 'arrow') {
-      const N = arr.length;
-      const ringDepth = 20;
-      const phi = Math.PI * 2;
-      for (let i = 0; i < N; i++) {
-        const ang = (i / Math.max(1, N)) * Math.PI * 2 + phi;
-        arr[i].z += Math.cos(ang) * ringDepth;
-      }
-    }
-
-    for (let it = 0; it < MAIN_ITERS; it++) {
-      for (let i = 0; i < arr.length; i++) {
-        for (let j = i + 1; j < arr.length; j++) {
-          const a = arr[i];
-          const b = arr[j];
-          if (layout === 'arrow') {
-            const dx = a.x - b.x;
-            const dy = a.y - b.y;
-            const d = Math.hypot(dx, dy) || 0.0001;
-            const minDist = boundRadii[i] + boundRadii[j] + MAIN_PAD;
-            if (d < minDist) {
-              const push = (minDist - d) * 0.12;
-              const nx = dx / d;
-              const ny = dy / d;
-              a.x += nx * (push * 0.5);
-              a.y += ny * (push * 0.5);
-              b.x -= nx * (push * 0.5);
-              b.y -= ny * (push * 0.5);
-            }
-          } else {
-            const delta = new THREE.Vector3().subVectors(a, b);
-            const dist = Math.max(0.0001, delta.length());
-            const minDist = boundRadii[i] + boundRadii[j] + MAIN_PAD;
-            if (dist < minDist) {
-              const push = (minDist - dist) * 0.12;
-              const dir = delta.divideScalar(dist);
-              a.addScaledVector(dir, push * 0.5);
-              b.addScaledVector(dir, -push * 0.5);
-            }
-          }
-        }
-      }
-    }
-    return arr;
-  }, [bases, boundRadii, layout]);
+  const mainPositions = useMemo(
+    () => relaxMainPositions(bases, boundRadii, layout, CENTER_SCALE),
+    [bases, boundRadii, layout]
+  );
 
   // Energy links only between main planets (primary emotions)
-  const energyLinks = useMemo(() => {
-    // Build faux emotions from primaries so RuleEngine can link only existing nodes
-    const primaries: Emotion[] = clusters.map((c) => ({
-      id: c.key,
-      label: c.key,
-      valence: c.valence,
-      arousal: c.arousal,
-      intensity: 0.7,
-      colorHex: c.colors[0]
-    }));
-
-    const links = new RuleEngine({ id: 'energies', rules: EnergyRules }).apply(primaries);
-
-    // Aggregate undirected links only between primaries that exist
-    const idxById = new Map<string, number>();
-    for (let i = 0; i < clusters.length; i++) {
-      idxById.set(clusters[i].key, i);
-    }
-
-    type Agg = { a: number; b: number; kind: Link['kind']; weight: number };
-    const acc = new Map<string, Agg>();
-    for (const l of links) {
-      const ai = idxById.get(l.source);
-      const bi = idxById.get(l.target);
-      if (ai === undefined || bi === undefined) continue;
-      const a = Math.min(ai, bi);
-      const b = Math.max(ai, bi);
-      const key = `${l.kind}|${a}|${b}`;
-      const cur = acc.get(key);
-      if (cur) cur.weight = Math.min(1, cur.weight + l.weight * 0.5);
-      else acc.set(key, { a, b, kind: l.kind, weight: Math.min(1, l.weight) });
-    }
-    return Array.from(acc.values());
-  }, [clusters]);
-
-  const colorForKind = (kind: Link['kind']): string => {
-    switch (kind) {
-      case 'polarity':
-        return '#6EE7B7'; // green
-      case 'transition':
-        return '#FBBF24'; // amber
-      case 'cause':
-        return '#C084FC'; // violet
-      case 'function':
-        return '#60A5FA'; // blue
-      default:
-        return '#93C5FD';
-    }
-  };
-
-  // Create a smooth quadratic bezier arc between two 3D points in XY plane with slight Z lift
-  const makeArcPoints = (
-    a: THREE.Vector3,
-    b: THREE.Vector3,
-    curvature = 0.3,
-    segments = 64
-  ): THREE.Vector3[] => {
-    const dir = new THREE.Vector3().copy(b).sub(a);
-    const dist = Math.max(1e-4, dir.length());
-    // Perpendicular on XY plane
-    const perp = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
-    const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
-    const lift = curvature * dist;
-    const ctrl = new THREE.Vector3().copy(mid).addScaledVector(perp, lift);
-    // Slight z lift to avoid z-fighting
-    ctrl.z += layout === 'arrow' ? 0 : 0.15;
-
-    const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
-      // Quadratic Bezier: (1-t)^2 A + 2(1-t)t C + t^2 B
-      const one = 1 - t;
-      const p = new THREE.Vector3()
-        .copy(a)
-        .multiplyScalar(one * one)
-        .add(new THREE.Vector3().copy(ctrl).multiplyScalar(2 * one * t))
-        .add(new THREE.Vector3().copy(b).multiplyScalar(t * t));
-      pts.push(p);
-    }
-    return pts;
-  };
-
-  const linkWidthForKind = (kind: Link['kind']): number => {
-    switch (kind) {
-      case 'polarity':
-        return 1.8;
-      case 'transition':
-        return 1.5;
-      case 'cause':
-        return 1.3;
-      case 'function':
-        return 1.4;
-      default:
-        return 1.4;
-    }
-  };
-
-  // Build a per-vertex gradient between two hex colors across N points
-  const gradientColors = (hexA: string, hexB: string, count: number): THREE.Color[] => {
-    const ca = new THREE.Color(hexA);
-    const cb = new THREE.Color(hexB);
-    const arr: THREE.Color[] = [];
-    for (let i = 0; i < count; i++) {
-      const t = count <= 1 ? 0 : i / (count - 1);
-      const c = ca.clone().lerp(cb, t);
-      arr.push(c);
-    }
-    return arr;
-  };
+  const energyLinks = useMemo<EnergyLinkAgg[]>(
+    () => computePrimaryEnergyLinks(clusters),
+    [clusters]
+  );
 
   return (
     <group>
       {/* Energy links between main planets (only primaries) */}
       <group>
         {energyLinks.map((el, i) => {
-          const aPos = mainPositions[el.a];
-          const bPos = mainPositions[el.b];
-          const points = makeArcPoints(aPos, bPos, 0.28, 72);
-          const baseColor = colorForKind(el.kind);
-          const colA = clusters[el.a].colors[0] ?? baseColor;
-          const colB = clusters[el.b].colors[0] ?? baseColor;
+          const aPos = mainPositions[el.aIndex];
+          const bPos = mainPositions[el.bIndex];
+          const { points, ctrl } = makeArcPoints(aPos, bPos, 0.28, 72, layout);
+          const colA = el.colA;
+          const colB = el.colB;
           const vColors = gradientColors(colA, colB, points.length);
           const opacity = Math.min(0.9, 0.22 + el.weight * 0.5);
           const width = linkWidthForKind(el.kind);
-          // Recompute control point to feed the pulse
-          const dir = new THREE.Vector3().copy(bPos).sub(aPos);
-          const perp = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
-          const mid = new THREE.Vector3().addVectors(aPos, bPos).multiplyScalar(0.5);
-          const ctrl = new THREE.Vector3().copy(mid).addScaledVector(perp, 0.28 * dir.length());
-          ctrl.z += 0.15;
 
-          const key = `energy-${el.kind}-${el.a}-${el.b}-${i}`;
+          const key = `energy-${el.kind}-${el.aIndex}-${el.bIndex}-${i}`;
           return (
             <group key={key}>
               <Line
@@ -508,9 +324,26 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                 opacity={opacity}
                 depthWrite={false}
               />
-              {/* Pulsing neuron(s) traveling from A to B (and a lighter reverse) */}
-              <EnergyPulse a={aPos} b={bPos} ctrl={ctrl} colorA={colA} colorB={colB} speed={0.35 + el.weight * 0.25} size={0.11} phase={(i * 0.17) % 1} />
-              <EnergyPulse a={bPos} b={aPos} ctrl={ctrl} colorA={colB} colorB={colA} speed={0.28 + el.weight * 0.2} size={0.085} phase={(i * 0.41) % 1} />
+              <EnergyPulse
+                a={aPos}
+                b={bPos}
+                ctrl={ctrl}
+                colorA={colA}
+                colorB={colB}
+                speed={0.35 + el.weight * 0.25}
+                size={0.11}
+                phase={(i * 0.17) % 1}
+              />
+              <EnergyPulse
+                a={bPos}
+                b={aPos}
+                ctrl={ctrl}
+                colorA={colB}
+                colorB={colA}
+                speed={0.28 + el.weight * 0.2}
+                size={0.085}
+                phase={(i * 0.41) % 1}
+              />
             </group>
           );
         })}

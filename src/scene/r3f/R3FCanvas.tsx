@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 import ClustersScene from './ClustersScene';
-import UniverseScene from '@/scene/r3f/UniverseScene';
 
 extend({ UnrealBloomPass });
 
