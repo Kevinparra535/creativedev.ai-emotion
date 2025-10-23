@@ -1,13 +1,13 @@
-import Canvas from '@/ui/components/Canvas';
+import MainScreen from '@/ui/components/MainScreen';
 import { GlobalStyles } from '@/ui/styles/base';
-import UniverseCanvas from '@/ui/canvas/UniverseCanvas';
+import R3FCanvas from './scene/r3f/R3FCanvas';
 
 function App() {
   return (
     <>
       <GlobalStyles />
-  <UniverseCanvas />
-      <Canvas />
+      <R3FCanvas />
+      <MainScreen />
     </>
   );
 }

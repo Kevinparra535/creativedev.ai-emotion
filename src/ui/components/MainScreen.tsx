@@ -7,7 +7,6 @@ import {
   type ChangeEvent
 } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
-import styled from 'styled-components';
 import { Leva } from 'leva';
 
 import PromptInput from '@/features/prompt/PromptInput';
@@ -15,25 +14,13 @@ import LoaderIndicator from './LoaderIndicator';
 
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
 
-import { CanvasRoot } from '@/ui/styles/Canvas.styled';
+import { AnimShape, MainRoot } from '@/ui/styles/MainScreen.styled';
 import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
 import { useUniverse } from '@/state/universe.store';
 import { emotionService } from '@/services/EmotionServiceFactory';
 
-const AnimShape = styled(motion.div)`
-  position: absolute;
-  z-index: 1;
-  width: 80px;
-  height: 80px;
-  border-radius: ${spacing.space_x5};
-  background: conic-gradient(from 180deg at 50% 50%, #ff7a59, #ffd166, #7bdff2, #bdb2ff, #ff7a59);
-  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.35));
-  pointer-events: none;
-  will-change: transform, width, height, border-radius, rotate;
-`;
-
-const Canvas = () => {
+const MainScreen = () => {
   const [text, setText] = useState('');
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
@@ -58,9 +45,9 @@ const Canvas = () => {
   useEffect(() => {
     if (!text || !text.trim()) return;
     let cancelled = false;
-  const timer = globalThis.setTimeout(async () => {
+    const timer = globalThis.setTimeout(async () => {
       try {
-  const { emotions, links, galaxies } = await emotionService.analyzeToGraph(text);
+        const { emotions, links, galaxies } = await emotionService.analyzeToGraph(text);
         if (!cancelled) setUniverseData({ emotions, links, galaxies });
       } catch (err) {
         // non-fatal: keep previous universe data but surface in devtools
@@ -69,7 +56,7 @@ const Canvas = () => {
     }, 450);
     return () => {
       cancelled = true;
-  globalThis.clearTimeout(timer);
+      globalThis.clearTimeout(timer);
     };
   }, [text, setUniverseData]);
 
@@ -89,8 +76,8 @@ const Canvas = () => {
 
   const onType = useCallback(() => {
     setReading(true);
-  if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
-  typingTimer.current = globalThis.setTimeout(() => setReading(false), 700);
+    if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
+    typingTimer.current = globalThis.setTimeout(() => setReading(false), 700);
   }, []);
 
   // useEffect(() => {
@@ -136,7 +123,7 @@ const Canvas = () => {
       el.removeEventListener('input', onType);
       el.removeEventListener('keydown', onType);
 
-  if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
+      if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
     };
   }, [onType]);
 
@@ -186,7 +173,7 @@ const Canvas = () => {
   }, [target.width, target.height, controls, inputControls]);
 
   return (
-    <CanvasRoot>
+    <MainRoot>
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
       {/* input on top (fades in after intro) */}
@@ -213,8 +200,8 @@ const Canvas = () => {
 
       {/* Leva panel */}
       <Leva titleBar={{ title: 'Emotion Controls' }} />
-    </CanvasRoot>
+    </MainRoot>
   );
 };
 
-export default Canvas;
+export default MainScreen;

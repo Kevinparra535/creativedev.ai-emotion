@@ -2,9 +2,10 @@ import { Canvas, extend } from '@react-three/fiber';
 import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import { CameraControls, PerspectiveCamera, Stars } from '@react-three/drei';
+import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 import ClustersScene from './ClustersScene';
+import UniverseScene from '@/ui/scene/UniverseScene';
 
 extend({ UnrealBloomPass });
 
@@ -35,11 +36,13 @@ const R3FCanvas = () => {
       }}
     >
       <Suspense fallback={null}>
+        <Stats />
         <ambientLight intensity={0.35} />
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
         <directionalLight position={[-2, -3, -5]} intensity={0.8} castShadow />
 
-        <ClustersScene layout='arrow' />
+        {/* <ClustersScene layout='arrow' /> */}
+        <UniverseScene />
 
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls />
