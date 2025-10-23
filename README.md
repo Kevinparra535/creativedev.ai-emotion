@@ -71,3 +71,7 @@ export default defineConfig([
   },
 ])
 ```
+
+## Documentación
+
+- Arquitectura: consulte `docs/architecture.md` para una descripción de la estructura, flujo de datos, contratos y cómo extender el sistema.

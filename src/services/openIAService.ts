@@ -38,10 +38,11 @@ export async function analyzeText(
     });
     if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
     const data = await res.json();
-    console.log('OpenAI response data:', data);
     const content: string = data.choices?.[0]?.message?.content ?? '';
+    console.log('OpenAI response data:', content);
     return tryParseEmotion(content) ?? localHeuristic(text);
   } catch {
+    console.error('[openIAService] analyzeText falling back to heuristic');
     return localHeuristic(text);
   }
 }
