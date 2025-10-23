@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import {  motion, useAnimationControls } from 'framer-motion';
 import PromptInput from '../../features/prompt/PromptInput';
 import Vizualizer from '../../scene/dom/Vizualizer';
+import { useEmotionEngine } from '@/hooks/useEmotionEngine';
 import LoaderIndicator from './LoaderIndicator';
 
 const AnimShape = styled(motion.div)`
@@ -22,10 +23,13 @@ const Canvas = () => {
   const controls = useAnimationControls();
   const inputControls = useAnimationControls();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [text, setText] = useState('');
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
   const [reading, setReading] = useState(false);
   const typingTimer = useRef<number | null>(null);
+
+  const { emotion, analyzing } = useEmotionEngine(text, 400);
 
   // Measure input size on mount and on resize
   useLayoutEffect(() => {
@@ -107,15 +111,21 @@ const Canvas = () => {
 
   return (
     <CanvasRoot>
-      <Vizualizer />
+      <Vizualizer emotion={emotion} analyzing={analyzing} />
 
-      <LoaderIndicator reading={reading} />
+  <LoaderIndicator reading={reading || analyzing} />
 
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
       {/* input on top (fades in after intro) */}
       <motion.div initial={{ opacity: 0, y: 0 }} animate={inputControls}>
-        <PromptInput type='text' placeholder='Describe how your feeling today...' ref={inputRef} />
+        <PromptInput
+          type='text'
+          placeholder='Describe how your feeling today...'
+          ref={inputRef}
+          value={text}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value)}
+        />
       </motion.div>
     </CanvasRoot>
   );
