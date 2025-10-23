@@ -42,6 +42,14 @@ const config = {
       fear: '/audio/hover/fear.mp3'
     } as Record<string, string>
   }
+  ,
+  TEXTURES: {
+    ENABLED: false,
+    PLANET_KEY: 'joy',
+    PACK: 'ravine-rock1-bl',
+    ENABLE_DISPLACEMENT: false,
+    DISPLACEMENT_SCALE: 0.02
+  }
 };
 
 export default config;
