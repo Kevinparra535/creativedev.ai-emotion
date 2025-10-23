@@ -8,6 +8,7 @@ class AudioManagerImpl {
   private ambientSource: AudioBufferSourceNode | null = null;
   private bufferCache = new Map<string, AudioBuffer>();
   private interactionArmed = false;
+  private lastHoverAt = new Map<string, number>();
 
   private ensureContext(): AudioContext {
     if (this.ctx) return this.ctx;
@@ -28,7 +29,7 @@ class AudioManagerImpl {
     // apply default volumes
     this.setAmbientVolume(config.AUDIO.AMBIENT_VOLUME);
     this.setSfxVolume(config.AUDIO.SFX_VOLUME);
-  return ctx;
+    return ctx;
   }
 
   resumeOnInteraction() {
@@ -45,9 +46,13 @@ class AudioManagerImpl {
     const events = ['pointerdown', 'keydown', 'touchstart'];
     const handler = () => {
       resume();
-      events.forEach((e) => window.removeEventListener(e, handler, { passive: true } as AddEventListenerOptions));
+      events.forEach((e) =>
+        window.removeEventListener(e, handler, { passive: true } as AddEventListenerOptions)
+      );
     };
-    events.forEach((e) => window.addEventListener(e, handler, { passive: true } as AddEventListenerOptions));
+    events.forEach((e) =>
+      window.addEventListener(e, handler, { passive: true } as AddEventListenerOptions)
+    );
   }
 
   private async loadBuffer(url: string): Promise<AudioBuffer | null> {
@@ -95,7 +100,11 @@ class AudioManagerImpl {
 
   stopAmbient() {
     if (this.ambientSource) {
-      try { this.ambientSource.stop(); } catch { void 0; }
+      try {
+        this.ambientSource.stop();
+      } catch {
+        void 0;
+      }
       this.ambientSource.disconnect();
       this.ambientSource = null;
     }
@@ -111,7 +120,9 @@ class AudioManagerImpl {
     try {
       const node = src as AudioBufferSourceNode & { detune?: AudioParam };
       if (node.detune) node.detune.setValueAtTime(detuneCents, ctx.currentTime);
-    } catch { void 0; }
+    } catch {
+      void 0;
+    }
     src.connect(this.sfxGain!);
     src.start(0);
   }
@@ -121,6 +132,10 @@ class AudioManagerImpl {
     const key = String(label || '').toLowerCase();
     const url = config.AUDIO.PLANET_SOUNDS[key];
     if (!url) return;
+    const now = performance.now();
+    const last = this.lastHoverAt.get(key) ?? 0;
+    if (now - last < (config.AUDIO.HOVER_COOLDOWN_MS ?? 200)) return;
+    this.lastHoverAt.set(key, now);
     const detune = (Math.random() - 0.5) * 40; // small natural variation
     await this.playOneShot(url, detune);
   }

@@ -43,6 +43,22 @@ function Planet({
   const emissive = new THREE.Color(colorB ?? colorA);
   const [hovered, setHovered] = useState<boolean>(false);
   useCursor(interactive && hovered);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const haloMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const haloMeshRef = useRef<THREE.Mesh>(null);
+  const pulseRef = useRef(0);
+
+  // Hover pulse animation to add a subtle bloom pop when sound plays
+  useFrame((_, delta) => {
+    // Exponential decay of pulse
+    pulseRef.current += (0 - pulseRef.current) * Math.min(1, delta * 4);
+    const base =
+      hovered && interactive ? (hoverEmissive ?? emissiveIntensity * 1.6) : emissiveIntensity;
+    const boosted = base * (1 + 0.6 * pulseRef.current);
+    if (matRef.current) matRef.current.emissiveIntensity = boosted;
+    if (haloMatRef.current) haloMatRef.current.opacity = 0.12 * (1 + 1.5 * pulseRef.current);
+    if (haloMeshRef.current) haloMeshRef.current.scale.setScalar(1 + 0.08 * pulseRef.current);
+  });
 
   const effEmissive =
     hovered && interactive ? (hoverEmissive ?? emissiveIntensity * 1.6) : emissiveIntensity;
@@ -57,6 +73,8 @@ function Planet({
               setHovered(true);
               // play hover sfx for this planet's label
               AudioManager.playHoverForEmotion(label).catch(() => {});
+              // trigger visual pulse
+              pulseRef.current = 1;
             }
           : undefined
       }
@@ -77,6 +95,7 @@ function Planet({
           emissiveIntensity={effEmissive}
           roughness={0.45}
           metalness={0.06}
+          ref={matRef}
         />
         <meshPhysicalMaterial
           roughness={0}
@@ -86,9 +105,9 @@ function Planet({
         />
       </mesh>
       {/* halo */}
-      <mesh>
+      <mesh ref={haloMeshRef}>
         <sphereGeometry args={[radius * 1.25, 32, 32]} />
-        <meshBasicMaterial color={colorA} transparent opacity={0.12} />
+        <meshBasicMaterial color={colorA} transparent opacity={0.12} ref={haloMatRef} />
       </mesh>
       {/* label */}
       <group position={[0, radius + 0.36, 0]}>
