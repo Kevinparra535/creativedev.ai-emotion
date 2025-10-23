@@ -3,8 +3,8 @@ import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import UniverseScene from './UniverseScene';
-import { CameraControls, PerspectiveCamera } from '@react-three/drei';
-import { Bloom, DepthOfField, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
+import { CameraControls, PerspectiveCamera, Stars } from '@react-three/drei';
+import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 
 extend({ UnrealBloomPass });
 
@@ -51,6 +51,8 @@ const R3FCanvas = () => {
           <Noise opacity={0.02} />
           <Vignette eskil={false} offset={0.1} darkness={1.1} />
         </EffectComposer>
+
+        <Stars radius={200} depth={1} count={5000} factor={4} saturation={0} fade speed={2} />
       </Suspense>
     </Canvas>
   );

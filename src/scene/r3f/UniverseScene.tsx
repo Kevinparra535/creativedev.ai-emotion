@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Text, Line } from '@react-three/drei';
 import { getPresetForEmotion } from '@/config/emotion-presets';
 import { useEmotionStore } from '@/stores/emotionStore';
+import { useUniverseStore } from '@/stores/universeStore';
 
 const PRIMARY: string[] = [
   'love',
@@ -38,17 +39,6 @@ type Node = {
   colorB: string;
 };
 
-function ringPositions(count: number, radius = 6, phase = 0) {
-  return new Array(count).fill(0).map((_, i) => {
-    const t = (i / count) * Math.PI * 2 + phase;
-    return new THREE.Vector3(
-      Math.cos(t) * radius,
-      Math.sin(t) * radius * 0.4,
-      Math.sin(t) * radius * 0.2
-    );
-  });
-}
-
 function colorFor(label: string) {
   const preset = getPresetForEmotion(label);
   return [preset.colors[0] ?? '#ffffff', preset.colors[1] ?? preset.colors[0] ?? '#ffffff'] as [
@@ -63,9 +53,10 @@ type PlanetProps = {
   colorA: string;
   colorB?: string;
   label: string;
+  emissiveIntensity?: number;
 };
 
-function Planet({ position, radius, colorA, colorB, label }: PlanetProps) {
+function Planet({ position, radius, colorA, colorB, label, emissiveIntensity = 0.6 }: PlanetProps) {
   // Simple material: base color + subtle emissive tint
   const emissive = new THREE.Color(colorB ?? colorA).multiplyScalar(0.6);
   const pos = Array.isArray(position) ? position : position.toArray();
@@ -76,6 +67,7 @@ function Planet({ position, radius, colorA, colorB, label }: PlanetProps) {
         <meshStandardMaterial
           color={colorA}
           emissive={emissive}
+          emissiveIntensity={emissiveIntensity}
           roughness={0.45}
           metalness={0.05}
         />
@@ -99,104 +91,103 @@ function Planet({ position, radius, colorA, colorB, label }: PlanetProps) {
 
 export default function UniverseScene() {
   const current = useEmotionStore((s) => s.current);
+  const graph = useUniverseStore((s) => s.graph);
 
-  // Helper ring for layout
-  const primaryRing: Node[] = useMemo(() => {
-    const pos = ringPositions(PRIMARY.length, 7, Math.PI / 8);
-    return PRIMARY.map((label, i) => {
+  // Affect defaults for primaries (valence [-1..1], arousal [0..1])
+  const AFFECT: Record<string, { valence: number; arousal: number }> = {
+    love: { valence: 0.85, arousal: 0.6 },
+    joy: { valence: 0.9, arousal: 0.7 },
+    calm: { valence: 0.6, arousal: 0.2 },
+    sadness: { valence: -0.7, arousal: 0.3 },
+    fear: { valence: -0.85, arousal: 0.8 },
+    anger: { valence: -0.7, arousal: 0.7 },
+    surprise: { valence: 0.2, arousal: 0.9 },
+    nostalgia: { valence: 0.2, arousal: 0.4 }
+  };
+
+  const spreadX = 7;
+  const spreadY = 6;
+
+  const jitterFor = (label: string) => {
+    let h = 0;
+    for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) | 0;
+    return ((h % 1000) / 1000 - 0.5) * 1.2; // ~[-0.6..0.6]
+  };
+
+  const nodes: Node[] = useMemo(() => {
+    return PRIMARY.map((label) => {
       const [a, b] = colorFor(label);
-      return { label, pos: pos[i], colorA: a, colorB: b };
+      const aff = AFFECT[label] ?? { valence: 0, arousal: 0.5 };
+      const x = aff.valence * spreadX;
+      const y = (aff.arousal - 0.5) * spreadY;
+      const z = jitterFor(label);
+      return { label, pos: new THREE.Vector3(x, y, z), colorA: a, colorB: b };
     });
   }, []);
 
-  // If there is an active emotion, render a central big planet and a ring of related planets (no connections)
-  if (current?.label) {
-    const label = current.label.toLowerCase();
-    const colors = current.colors?.length ? current.colors : getPresetForEmotion(label).colors;
-    const colorA = colors[0] ?? '#ffffff';
-    const colorB = colors[1] ?? colorA;
-    const intensity = THREE.MathUtils.clamp(current.intensity ?? current.score ?? 0.6, 0, 1);
-    const arousal = THREE.MathUtils.clamp(current.arousal ?? 0.3, 0, 1);
+  // Active set = current label + its relations mapped to primaries (for stronger glow)
+  const activeSet = useMemo(() => {
+    const set = new Set<string>();
+    if (current?.label) set.add(current.label.toLowerCase());
+    (current?.relations ?? []).forEach((r) => {
+      const k = (RELATION_ALIAS[r.toLowerCase()] ?? r.toLowerCase()).trim();
+      if (PRIMARY.includes(k)) set.add(k);
+    });
+    return set;
+  }, [current?.label, current?.relations]);
 
-    // Center planet size scales with intensity/score
-    const centerRadius = 0.8 + intensity * 1.4; // 0.8 .. 2.2
+  // Semantic edges between primaries (soft connectivity)
+  const EDGES: Array<[string, string]> = [
+    ['love', 'joy'],
+    ['joy', 'surprise'],
+    ['calm', 'nostalgia'],
+    ['sadness', 'nostalgia'],
+    ['fear', 'anger'],
+    ['anger', 'sadness']
+  ];
 
-    // Related emotions as smaller planets, scaled by order (no weights available)
-    const relationLabels = (current.relations ?? [])
-      .map((r) => r?.toLowerCase())
-      .filter(Boolean)
-      .map((rel) => RELATION_ALIAS[rel!] ?? rel!)
-      .filter((rel) => rel !== label);
+  // Optional weight map from graph to modulate size/brightness
+  const weights = useMemo(() => {
+    const map = new Map<string, number>();
+    const nodes = graph?.nodes ?? [];
+    let maxW = 0;
+    nodes.forEach((n) => {
+      map.set(n.label.toLowerCase(), n.weight);
+      if (n.weight > maxW) maxW = n.weight;
+    });
+    // normalize to [0..1]
+    if (maxW > 0) {
+      nodes.forEach((n) => map.set(n.label.toLowerCase(), n.weight / maxW));
+    }
+    return map;
+  }, [graph?.nodes]);
 
-    const ringR = 5 + arousal * 2; // layout radius
-    const ringPos = ringPositions(Math.max(1, relationLabels.length), ringR, Math.PI / 6);
-
-    return (
-      <group>
-        {/* Central big planet */}
-        <Planet
-          position={[0, 0, 0]}
-          radius={centerRadius}
-          colorA={colorA}
-          colorB={colorB}
-          label={label}
-        />
-
-        {/* Ring planets (no connections) */}
-        {relationLabels.map((rel, i) => {
-          const p = ringPos[i] ?? new THREE.Vector3(ringR, 0, 0);
-          const [ra, rb] = colorFor(rel);
-          // scale down with index so earlier relations appear larger
-          const t = relationLabels.length > 1 ? i / (relationLabels.length - 1) : 1;
-          const relScale = 0.45 + (1 - t) * 0.55; // 0.45 .. 1.0
-          const base = 0.38 + intensity * 0.6; // 0.38 .. 0.98
-          const radius = base * relScale;
-          return (
-            <Planet
-              key={`rel-${rel}-${i}`}
-              position={p}
-              radius={radius}
-              colorA={ra}
-              colorB={rb}
-              label={rel}
-            />
-          );
-        })}
-      </group>
-    );
-  }
-
-  primaryRing.map((n, i) => {
-    const next = primaryRing[(i + 1) % primaryRing.length];
-    return (
-      <Line
-        key={`plink-${n.label}`}
-        points={[n.pos, next.pos]}
-        color={n.colorA}
-        opacity={0.18}
-        transparent
-        lineWidth={1}
-      />
-    );
-  });
-
-  primaryRing.map((n, i) => {
-    const radius = 0.6 + 0.25 * Math.sin((i / primaryRing.length) * Math.PI * 2);
-    return (
-      <Planet
-        key={`p-${n.label}`}
-        position={n.pos}
-        radius={radius}
-        colorA={n.colorA}
-        colorB={n.colorB}
-        label={n.label}
-      />
-    );
-  });
   return (
     <group>
-      {primaryRing.map((n, i) => {
-        const radius = 0.6 + 0.25 * Math.sin((i / primaryRing.length) * Math.PI * 2);
+      {/* Edges */}
+      {EDGES.map(([a, b]) => {
+        const na = nodes.find((n) => n.label === a);
+        const nb = nodes.find((n) => n.label === b);
+        if (!na || !nb) return null;
+        const isActive = activeSet.has(a) || activeSet.has(b);
+        return (
+          <Line
+            key={`edge-${a}-${b}`}
+            points={[na.pos, nb.pos]}
+            color={isActive ? '#ffffff' : na.colorA}
+            opacity={isActive ? 0.35 : 0.16}
+            transparent
+            lineWidth={isActive ? 1.5 : 1}
+          />
+        );
+      })}
+
+      {/* Planets */}
+      {nodes.map((n) => {
+        const isActive = activeSet.has(n.label);
+        const w = weights.get(n.label) ?? 0;
+        const radius = (0.75 + w * 0.9) * (isActive ? 1.1 : 1.0);
+        const emissiveIntensity = (0.5 + w * 0.9) * (isActive ? 1.1 : 1.0);
         return (
           <Planet
             key={`p-${n.label}`}
@@ -205,6 +196,7 @@ export default function UniverseScene() {
             colorA={n.colorA}
             colorB={n.colorB}
             label={n.label}
+            emissiveIntensity={emissiveIntensity}
           />
         );
       })}

@@ -30,6 +30,7 @@ export const promptToService = (): { role: string; content: string } => {
   };
 };
 
+
 export function tryParseEmotion(s: string): EmotionResponse | null {
   try {
     const match = /\{[\s\S]*\}/.exec(s);
