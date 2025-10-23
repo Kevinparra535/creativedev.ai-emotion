@@ -54,10 +54,7 @@ const Canvas = () => {
 
   const moveToBottom = useCallback(() => {
     if (!inputRef.current) return;
-    void inputControls.start(
-      { y: shiftY },
-      { duration: 0.3, ease: 'easeInOut' }
-    );
+    void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
   }, [inputControls, shiftY]);
 
   const moveToTop = useCallback(() => {
@@ -178,7 +175,8 @@ const Canvas = () => {
           position: 'relative',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexDirection: 'column',
         }}
       >
         <LoaderIndicator reading={reading || analyzing} />

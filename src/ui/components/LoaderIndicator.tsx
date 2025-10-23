@@ -6,7 +6,7 @@ type Props = {
   reading: boolean;
 };
 
-const LoaderIndicator = ({ reading }: Props) => {
+const LoaderIndicator = ({ reading = true }: Props) => {
   return (
     <AnimatePresence>
       {reading && (
@@ -39,9 +39,6 @@ const LoaderIndicator = ({ reading }: Props) => {
 };
 
 const Indicator = styled(motion.output)`
-  position: absolute;
-  bottom: -50px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 10px;
