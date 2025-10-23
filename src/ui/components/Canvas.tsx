@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import styled from 'styled-components';
 import { motion, useAnimationControls } from 'framer-motion';
-import InputField from './InputField';
+import PromptInput from './PromptInput';
 
 const AnimShape = styled(motion.div)`
   position: absolute;
@@ -92,7 +92,7 @@ const Canvas = () => {
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
       {/* input on top (fades in after intro) */}
       <motion.div initial={{ opacity: 0, y: 0 }} animate={inputControls}>
-        <InputField type='text' placeholder='Type something…' ref={inputRef} />
+        <PromptInput type='text' placeholder='Type something…' ref={inputRef} />
       </motion.div>
     </CanvasRoot>
   );

@@ -36,6 +36,25 @@
 - Implementa `src/services/emotion.ts` con heurística simple ahora y deja lista la interfaz para API posterior.
 - Transiciones: usa `motion.div` con `layout` y `spring` para cambios de preset sin saltos.
 
+## Rendimiento: 60fps en equipos modestos
+- Anima solo `transform` y `opacity` (evita `width/height/top/left`). Declara `will-change: transform, opacity` y desactiva interacción en capas animadas (`pointer-events: none`).
+- Minimiza efectos costosos: reduce `box-shadow`/`backdrop-filter`; precomputa gradientes y evita repaints sobre grandes áreas.
+- Framer Motion:
+	- Evita re-render por frame (usa `motion` + `useAnimationControls`/`MotionValue`; no muevas estado React en cada frame).
+	- Prefiere `spring` cortos y compuestos de `transform` (rotate/scale/translate) sobre `layout` cuando no sea necesario.
+	- Pausa fuera de viewport (`whileInView`, `useInView`) y respeta `useReducedMotion()`.
+- Partículas:
+	- Canvas/WebGL en un solo layer; nunca DOM por partícula.
+	- Cap dinámico de partículas y resolución según el dispositivo:
+		- `const lowEnd = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.deviceMemory ?? 8) <= 4`
+		- `const dpr = lowEnd ? Math.min(devicePixelRatio, 1.25) : Math.min(devicePixelRatio, 2)`
+	- Usa `requestAnimationFrame` con delta time; evita `setInterval`.
+	- Batch draw; no recalcules estilos por partícula.
+- React 19:
+	- Aísla animaciones en componentes memoizados (`React.memo`) y usa refs para datos mutables.
+	- Evita props que cambian cada frame; usa objetos/funciones memoizadas.
+- Medición rápida: Chrome Performance (FPS y “Timings”), React Profiler para renders, y el “Layers” panel para confirmar composición (transform/opacity).
+
 ## Archivos clave
 - `package.json`, `vite.config.ts`
 - `src/main.tsx`, `src/App.tsx`

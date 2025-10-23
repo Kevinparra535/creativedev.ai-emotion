@@ -9,7 +9,7 @@ type Props = {
   placeholder?: string;
 };
 
-const InputField = forwardRef<HTMLInputElement, Props>(({ ...props }, ref) => {
+const PromptInput = forwardRef<HTMLInputElement, Props>(({ ...props }, ref) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('Input changed:', e.target.value);
   };
@@ -17,5 +17,5 @@ const InputField = forwardRef<HTMLInputElement, Props>(({ ...props }, ref) => {
   return <InputFieldRoot ref={ref} {...props} onChange={debounce(handleChange, 300)} />;
 });
 
-InputField.displayName = 'InputField';
-export default InputField;
+PromptInput.displayName = 'PromptInput';
+export default PromptInput;
