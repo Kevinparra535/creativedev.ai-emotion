@@ -40,7 +40,7 @@ const LoaderIndicator = ({ reading }: Props) => {
 
 const Indicator = styled(motion.output)`
   position: absolute;
-  bottom: 10dvh;
+  bottom: -50px;
   z-index: 2;
   display: inline-flex;
   align-items: center;

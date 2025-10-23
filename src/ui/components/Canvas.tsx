@@ -170,12 +170,16 @@ const Canvas = () => {
         intensity={intensity}
       />
 
-      <LoaderIndicator reading={reading || analyzing} />
-
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
       {/* input on top (fades in after intro) */}
-      <motion.div initial={{ opacity: 0, y: 0 }} animate={inputControls}>
+      <motion.div
+        initial={{ opacity: 0, y: 0 }}
+        animate={inputControls}
+        style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+      >
+        <LoaderIndicator reading={reading || analyzing} />
+
         <PromptInput
           ref={inputRef}
           value={text}
