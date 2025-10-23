@@ -1,11 +1,14 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CanvasRoot } from '@/ui/styles/Canvas.styled';
-import styled from 'styled-components';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
-import PromptInput from '../../features/prompt/PromptInput';
-import Vizualizer from '../../scene/dom/Vizualizer';
-import { useEmotionEngine } from '@/hooks/useEmotionEngine';
+import styled from 'styled-components';
+
+import PromptInput from '@/features/prompt/PromptInput';
+import Vizualizer from '@/scene/dom/Vizualizer';
 import LoaderIndicator from './LoaderIndicator';
+
+import { useEmotionEngine } from '@/hooks/useEmotionEngine';
+
+import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 
 const AnimShape = styled(motion.div)`
   position: absolute;
@@ -20,16 +23,28 @@ const AnimShape = styled(motion.div)`
 `;
 
 const Canvas = () => {
-  const controls = useAnimationControls();
-  const inputControls = useAnimationControls();
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const [text, setText] = useState('');
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
   const [reading, setReading] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const typingTimer = useRef<number | null>(null);
 
+  const controls = useAnimationControls();
+  const inputControls = useAnimationControls();
+
   const { emotion, analyzing } = useEmotionEngine(text, 400);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setText(e.target.value);
+  };
+
+  const onType = () => {
+    setReading(true);
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    typingTimer.current = window.setTimeout(() => setReading(false), 700);
+  };
 
   // Measure input size on mount and on resize
   useLayoutEffect(() => {
@@ -53,16 +68,14 @@ const Canvas = () => {
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    const onType = () => {
-      setReading(true);
-      if (typingTimer.current) window.clearTimeout(typingTimer.current);
-      typingTimer.current = window.setTimeout(() => setReading(false), 700);
-    };
+
     el.addEventListener('input', onType);
     el.addEventListener('keydown', onType);
+
     return () => {
       el.removeEventListener('input', onType);
       el.removeEventListener('keydown', onType);
+
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
     };
   }, [inputRef.current]);
@@ -120,11 +133,11 @@ const Canvas = () => {
       {/* input on top (fades in after intro) */}
       <motion.div initial={{ opacity: 0, y: 0 }} animate={inputControls}>
         <PromptInput
-          type='text'
-          placeholder='Describe how your feeling today...'
           ref={inputRef}
+          type='text'
           value={text}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value)}
+          onChange={handleChange}
+          placeholder='Describe how your feeling today...'
         />
       </motion.div>
     </CanvasRoot>

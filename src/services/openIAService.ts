@@ -1,6 +1,6 @@
 import config from '@/config/config';
 
-export type Emotion = {
+export type EmotionResponse = {
   label: string;
   score: number;
   valence: number; // -1..1
@@ -9,7 +9,10 @@ export type Emotion = {
 
 type AnalyzeOptions = { signal?: AbortSignal };
 
-export async function analyzeText(text: string, options?: AnalyzeOptions): Promise<Emotion> {
+export async function analyzeText(
+  text: string,
+  options?: AnalyzeOptions
+): Promise<EmotionResponse> {
   if (!config.OPENAI_API_KEY) return localHeuristic(text);
 
   try {
@@ -35,6 +38,7 @@ export async function analyzeText(text: string, options?: AnalyzeOptions): Promi
     });
     if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
     const data = await res.json();
+    console.log('OpenAI response data:', data);
     const content: string = data.choices?.[0]?.message?.content ?? '';
     return tryParseEmotion(content) ?? localHeuristic(text);
   } catch {
@@ -42,12 +46,12 @@ export async function analyzeText(text: string, options?: AnalyzeOptions): Promi
   }
 }
 
-function tryParseEmotion(s: string): Emotion | null {
+function tryParseEmotion(s: string): EmotionResponse | null {
   try {
     const match = /\{[\s\S]*\}/.exec(s);
     const json = match ? match[0] : null;
     if (!json) return null;
-    const obj = JSON.parse(json) as Partial<Emotion>;
+    const obj = JSON.parse(json) as Partial<EmotionResponse>;
     if (!obj.label) return null;
     return {
       label: String(obj.label),
@@ -60,7 +64,7 @@ function tryParseEmotion(s: string): Emotion | null {
   }
 }
 
-function localHeuristic(text: string): Emotion {
+function localHeuristic(text: string): EmotionResponse {
   const t = text.toLowerCase();
   if (!t.trim()) return { label: 'neutral', score: 1, valence: 0, arousal: 0.2 };
   const joy = /(feliz|alegr|gracias|amor|content|😊|😀)/.test(t);
