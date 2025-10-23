@@ -2,9 +2,9 @@ import { Canvas, extend } from '@react-three/fiber';
 import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import { CameraControls, PerspectiveCamera, Stars } from '@react-three/drei';
+import { CameraControls, PerspectiveCamera, Stars, Text } from '@react-three/drei';
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
-import EmotionCluster from './EmotionCluster';
+import ClustersScene from './ClustersScene';
 
 extend({ UnrealBloomPass });
 
@@ -37,11 +37,19 @@ const R3FCanvas = () => {
       <Suspense fallback={null}>
         <ambientLight intensity={0.35} />
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
-  {/* Clusters scene in progress: using EmotionCluster placeholders */}
-        <EmotionCluster name='Alegría' color='#FFD54F' position={[2, 1, 0]} />
-        <EmotionCluster name='Tristeza' color='#64B5F6' position={[-3, -1, 0]} />
-        <EmotionCluster name='Ira' color='#E57373' position={[0, 2, 1]} />
-        <EmotionCluster name='Amor' color='#F06292' position={[0, 0, -3]} />
+        <directionalLight position={[-2, -3, -5]} intensity={0.8} castShadow />
+        {/* Variation A: fixed centers from cluster config */}
+        <Text
+          position={[0, 3.6, 0]}
+          fontSize={0.26}
+          color={'#ccd'}
+          anchorX='center'
+          anchorY='bottom'
+        >
+          clusters: centers
+        </Text>
+        <ClustersScene layout='centers' />
+
         <PerspectiveCamera
           makeDefault
           position={[0.265, 0.672, 17.016]}
@@ -56,7 +64,7 @@ const R3FCanvas = () => {
           <Vignette eskil={false} offset={0.1} darkness={1.1} />
         </EffectComposer>
 
-        <Stars radius={200} depth={1} count={5000} factor={4} saturation={0} fade speed={2} />
+        <Stars radius={200} depth={1} count={6000} factor={2.5} saturation={0} fade speed={2} />
       </Suspense>
     </Canvas>
   );
