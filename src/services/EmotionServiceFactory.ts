@@ -5,6 +5,7 @@ import type { Galaxy } from '@/domain/galaxy';
 import { GraphBuilder } from '@/systems/GraphBuilder';
 import { clusterByPrimaries } from '@/systems/ClusterEngine';
 import { RuleEngine } from '@/systems/RuleEngine';
+import { EnergyRules } from '@/systems/rules/EnergyRules';
 import { mapAIToDomain } from '@/data/mappers';
 import { buildPayloadFromText, localHeuristic } from '@/ai/local-emotions';
 import { OpenIAAdapter } from '@/services/OpenIAAdapter';
@@ -57,7 +58,8 @@ const LocalEmotionService: EmotionService = {
   },
   async analyzeToGraph(text: string) {
     const { emotions, links } = await this.analyzeMulti(text);
-    const ruleLinks = new RuleEngine({ id: 'base', rules: [] }).apply(emotions);
+    const rules = config.ENABLE_ENERGY_LINKS ? EnergyRules : [];
+    const ruleLinks = new RuleEngine({ id: 'energies', rules }).apply(emotions);
     const merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
     // Prefer primary emotion galaxies (love/joy/fear/...) over coarse valence buckets
     const galaxies = clusterByPrimaries(emotions);

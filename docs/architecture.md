@@ -1,121 +1,105 @@
-# Arquitectura de creativedev.ai-emotion
+# Arquitectura de creativedev.ai-emotion (v2)
 
-Esta app convierte texto en visuales reactivos según la emoción detectada. Se prioriza simplicidad, performance y capacidad de iteración rápida.
+La app convierte texto en visuales reactivos (DOM y WebGL) en función de emociones detectadas en tiempo real. La nueva capa de servicios permite alternar entre modo offline (heurística local) y online (API) con un solo toggle.
 
-## Tecnologías base
+## Stack principal
 
-- React 19 + TypeScript
-- Vite (plugin React SWC)
-- Framer Motion para micro-animaciones DOM
-- styled-components para estilos
+- React 19 + TypeScript + Vite (SWC)
+- Render dual: DOM (Framer Motion + styled-components) y WebGL con R3F/Drei
+- Estado: Zustand; Controles: Leva
+- Lint/Format: ESLint flat config + Prettier
 
-## Visión y flujo de datos
+## Flujo de extremo a extremo
 
-1) Usuario escribe en el input.
-2) Hook `useEmotionEngine` debounced invoca `services/emotion.analyzeText` (OpenAI si hay credenciales; heurística local si no).
-3) El resultado `Emotion` alimenta el `Vizualizer`, que usa un preset visual por emoción (colores, movimiento, partículas).
+1) Usuario escribe en el input (`PromptInput` controlado por `Canvas`).
+2) Hay dos caminos en paralelo:
+   - UI inmediata: `useEmotionEngine` publica una emoción dominante al store para feedback DOM rápido (gradientes, micro-animaciones).
+   - Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
+3) DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
+4) WebGL: `UniverseScene` renderiza nodos y enlaces instanciados; galaxias según clusters primarios.
 
 ```mermaid
-sequenceDiagram
-  actor U as Usuario
-  participant I as PromptInput
-  participant H as useEmotionEngine
-  participant S as services/emotion
-  participant V as Vizualizer
-
-  U->>I: Teclea texto
-  I->>H: value (debounced)
-  H->>S: analyzeText(text, {signal})
-  alt OpenAI disponible
-    S-->>H: Emotion (API)
-  else sin API/timeout/error
-    S-->>H: Emotion (heurística)
-  end
-  H-->>V: Emotion
-  V->>V: Actualiza gradient/motion por preset
+flowchart LR
+  A[PromptInput] -- text --> B[useEmotionEngine]
+  A -- text --> C[emotionService.analyzeToGraph]
+  B -- Emotion --> D[Vizualizer (DOM)]
+  C -- {emotions,links,galaxies} --> E[UniverseScene (R3F)]
 ```
 
-## Contratos y módulos
+## Modo de análisis (factory)
 
-- Emotion (resultado mínimo):
-  - `{ label: string; score: number; valence: -1..1; arousal: 0..1 }`
+- Toggle: `VITE_EMOTION_MODE = online | offline | auto` (por defecto: auto)
+- Factory: `EmotionServiceFactory` expone `emotionService`:
+  - online: usa `OpenIAAdapter` (API + Zod validation + fallback permisivo)
+  - offline: usa `local-emotions` (`buildPayloadFromText`/`localHeuristic`)
+  - auto: online si hay `VITE_OPENAI_API_KEY`, si no offline
 
-- services/emotion.ts
-  - `analyzeText(text, { signal }) => Promise<Emotion>`
-  - Intenta OpenAI (VITE_OPENAI_API_KEY, VITE_OPENAI_BASE_URL, VITE_OPENAI_MODEL). Si falla o no hay clave, usa heurística local (regex simples de español/inglés, emojis).
+## Módulos clave
 
-- hooks/useEmotionEngine.ts
-  - Debounce configurable (default 350–400ms)
-  - Cancela la solicitud anterior con AbortController
-  - Expone `{ emotion, analyzing, error }`
+- `src/services/EmotionServiceFactory.ts`
+  - Contrato común: `analyze`, `analyzeMulti`, `analyzeToGraph`
+  - Concatena reglas (`RuleEngine`) y clustering (`ClusterEngine`) para el universo.
 
-- config/emotion-presets.ts
-  - Mapa emoción → preset visual
-  - Ejemplos (ES/EN): alegría/joy, calma/calm, tristeza/sadness, miedo/fear, enojo/anger, nostalgia, neutral
-  - `getPresetForEmotion(label)`
+- `src/services/OpenIAAdapter.ts`
+  - Chat completions → texto → JSON
+  - Primero valida con `PayloadZ` (Zod); si falla, parser permisivo (`tryParseMulti`), y último fallback heurístico.
+  - `mapAIToDomain` transforma a `Emotion[]`/`Link[]`.
 
-- scene/dom/Vizualizer.tsx
-  - Recibe `{ emotion, analyzing }`
-  - Aplica gradient y micro-movimiento con Framer Motion según el preset
+- `src/ai/local-emotions.ts`
+  - `localHeuristic(text)` → emoción dominante normalizada
+  - `expandFromDominant` y `buildPayloadFromText` → payload multi (emotions + pairs + global)
 
-- ui/components/Canvas.tsx
-  - Orquesta la animación de intro, el PromptInput controlado, loader de “Leyendo tu tono…” y renderiza el Vizualizer con la emoción actual
+- `src/services/universeGraph.ts`
+  - Crea un grafo por frases: acumula pesos, valence/arousal, co-ocurrencias y pares semánticos.
+  - Fallbacks de afecto centralizados vía `AFFECT_DEFAULTS` (ClusterEngine).
 
-## Estructura de carpetas relevante
+- `src/systems/ClusterEngine.ts`
+  - Centraliza defaults de afecto (valence, arousal, palette) y sinónimos desde `config/emotion-clusters`.
+  - `clusterByPrimaries` genera galaxias reales (love/joy/fear/…)
 
-```text
-src/
-  services/
-    emotion.ts           # Servicio de análisis (OpenAI + heurística)
-  hooks/
-    useEmotionEngine.ts  # Debounce + Abort + estado de análisis
-  config/
-    emotion-presets.ts   # Mapeo emoción → preset visual
-  scene/
-    dom/
-      Vizualizer.tsx     # Visualizador DOM (gradients + micro-motion)
-  ui/
-    components/
-      Canvas.tsx         # Orquestación UI (input + loader + vizualizer)
-    styles/              # styled-components y utilidades
-```
+- `src/systems/GraphBuilder.ts` y `src/systems/RuleEngine.ts`
+  - Merge de links, clustering auxiliar y reglas (ej. polaridad, transiciones).
 
-## Variables de entorno
+- Rendering R3F instanciado
+  - `GalaxyInstanced.tsx`, `LinksInstanced.tsx`, `HaloCloud.tsx` optimizan el render (batch/instancing).
+  - `UniverseCanvas.tsx` incluye luces, OrbitControls y Stats.
 
-- Se usan variables `VITE_*` (expuestas por Vite a `import.meta.env`):
-  - `VITE_OPENAI_API_KEY`
-  - `VITE_OPENAI_BASE_URL` (opcional; default `https://api.openai.com/v1`)
-  - `VITE_OPENAI_MODEL` (opcional; default `gpt-4o-mini`)
-- Nota: Evitamos exponer `process.env` completo. Si agregas nuevas claves, prefija con `VITE_`.
+## Contratos (dominio)
 
-## Decisiones y trade-offs
+- Emotion: `{ id, label, valence, arousal, intensity?, colorHex?, meta? }`
+- Link: `{ id, source, target, weight, kind }`
+- Galaxy: `{ id, name, members[], centroid?, radius?, colorHex? }`
 
-- Sin DI/arquitecturas complejas: se favorece un servicio único y un hook para velocidad de iteración y claridad.
-- Heurística local: garantiza un UX robusto sin depender siempre de la red; perfecta para POC y fallback.
-- DOM primero: el Vizualizer DOM es el MVP. Una capa R3F/Canvas se puede añadir como servicio paralelo para partículas y shaders.
+Payload (multi) compatible con IA/local:
+- `MultiEmotionResult`: `{ version: 1, emotions[], global, pairs[] }`
 
-## Extensiones futuras (roadmap)
+## Configuración
 
-- Capa de partículas: un solo canvas por preset (densidad/dirección según `particles`).
-- Interpolación continua: mapear (valence, arousal) a presets y animar transiciones suaves.
-- Accesibilidad: respetar `prefers-reduced-motion` y ajustar densidad/velocidades.
-- Telemetría: medir tiempos de análisis, FPS y errores de red.
+- `VITE_EMOTION_MODE`: online | offline | auto
+- OpenAI: `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`
+- Ver `env_template` para ejemplo.
 
-## Performance (resumen práctico)
+## Performance y UX
 
-- Animar solo `transform` y `opacity`; declara `will-change`. Evitar repaints grandes.
-- Evitar actualizar estado React cada frame; usar Framer Motion y MotionValues.
-- Canvas/WebGL: un solo layer, `requestAnimationFrame` con delta time, cap de partículas por dispositivo.
+- DOM: animar transform/opacity y declarar `will-change`.
+- WebGL: instancing para nodos/enlaces; DPR adaptativo en canvas; postprocesado ligero.
+- Debounce (350–450ms) y cancelación para interacción fluida.
 
-## Cómo probar
+## Cómo ejecutar
 
 ```powershell
 npm run dev     # desarrollo con HMR
-npm run build   # build de producción
-npm run preview # servidor local de preview
+npm run build   # compila TS + build Vite
+npm run preview # sirve la build
 ```
 
-## Cómo extender
+## Extender/ajustar
 
-- Añadir nueva emoción: actualizar heurística en `services/emotion.ts` y su preset en `config/emotion-presets.ts`.
-- Cambiar proveedor de IA: modificar solo `services/emotion.ts` manteniendo el contrato `Emotion`.
+- Agregar emoción/sinónimo: actualizar `config/emotion-clusters` y, si hace falta, `emotion-presets`.
+- Cambiar layout de galaxias: extender `ClusterEngine` o añadir layout en sistemas.
+- Reglas de enlaces: añadir reglas a `RuleEngine`.
+
+## Notas
+
+- Preferir `import.meta.env` y claves `VITE_*`.
+- `EmotionServiceFactory` es el único lugar a tocar para cambiar política online/offline.

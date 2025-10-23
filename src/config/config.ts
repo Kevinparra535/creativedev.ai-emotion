@@ -11,7 +11,9 @@ const config = {
   OPENAI_MODEL: VITE_OPENAI_MODEL || 'gpt-4o-mini',
   INPUT_SHIFT_THRESHOLD: 10, // chars
   // 'online' | 'offline' | 'auto' (auto: online si hay API key, offline en caso contrario)
-  EMOTION_MODE: (VITE_EMOTION_MODE as 'online' | 'offline' | 'auto' | undefined) || 'auto'
+  EMOTION_MODE: (VITE_EMOTION_MODE as 'online' | 'offline' | 'auto' | undefined) || 'auto',
+  // Feature flag: agregar enlaces "energéticos" entre primarias (polarity/transition/cause/function)
+  ENABLE_ENERGY_LINKS: true
 };
 
 export default config;

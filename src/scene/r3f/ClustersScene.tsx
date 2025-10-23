@@ -3,6 +3,10 @@ import * as THREE from 'three';
 import { Text, useCursor, Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { getClusters } from '@/config/emotion-clusters';
+import { RuleEngine } from '@/systems/RuleEngine';
+import { EnergyRules } from '@/systems/rules/EnergyRules';
+import type { Emotion } from '@/domain/emotion';
+import type { Link } from '@/domain/link';
 
 export type ClustersLayout = 'centers' | 'affect' | 'arrow';
 
@@ -305,8 +309,82 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     return arr;
   }, [bases, boundRadii, layout]);
 
+  // Energy links only between main planets (primary emotions)
+  const energyLinks = useMemo(() => {
+    // Build faux emotions from primaries so RuleEngine can link only existing nodes
+    const primaries: Emotion[] = clusters.map((c) => ({
+      id: c.key,
+      label: c.key,
+      valence: c.valence,
+      arousal: c.arousal,
+      intensity: 0.7,
+      colorHex: c.colors[0]
+    }));
+
+    const links = new RuleEngine({ id: 'energies', rules: EnergyRules }).apply(primaries);
+
+    // Aggregate undirected links only between primaries that exist
+    const idxById = new Map<string, number>();
+    for (let i = 0; i < clusters.length; i++) {
+      idxById.set(clusters[i].key, i);
+    }
+
+    type Agg = { a: number; b: number; kind: Link['kind']; weight: number };
+    const acc = new Map<string, Agg>();
+    for (const l of links) {
+      const ai = idxById.get(l.source);
+      const bi = idxById.get(l.target);
+      if (ai === undefined || bi === undefined) continue;
+      const a = Math.min(ai, bi);
+      const b = Math.max(ai, bi);
+      const key = `${l.kind}|${a}|${b}`;
+      const cur = acc.get(key);
+      if (cur) cur.weight = Math.min(1, cur.weight + l.weight * 0.5);
+      else acc.set(key, { a, b, kind: l.kind, weight: Math.min(1, l.weight) });
+    }
+    return Array.from(acc.values());
+  }, [clusters]);
+
+  const colorForKind = (kind: Link['kind']): string => {
+    switch (kind) {
+      case 'polarity':
+        return '#6EE7B7'; // green
+      case 'transition':
+        return '#FBBF24'; // amber
+      case 'cause':
+        return '#C084FC'; // violet
+      case 'function':
+        return '#60A5FA'; // blue
+      default:
+        return '#93C5FD';
+    }
+  };
+
   return (
     <group>
+      {/* Energy links between main planets (only primaries) */}
+      <group>
+        {energyLinks.map((el, i) => {
+          const a = mainPositions[el.a];
+          const b = mainPositions[el.b];
+          const color = colorForKind(el.kind);
+          const opacity = Math.min(0.9, 0.22 + el.weight * 0.5);
+          const zLift = layout === 'arrow' ? 0 : 0.1;
+          const p1 = new THREE.Vector3(a.x, a.y, a.z + zLift);
+          const p2 = new THREE.Vector3(b.x, b.y, b.z + zLift);
+          return (
+            <Line
+              key={`energy-${el.kind}-${el.a}-${el.b}-${i}`}
+              points={[p1, p2]}
+              color={color}
+              lineWidth={1.4}
+              transparent
+              opacity={opacity}
+              depthWrite={false}
+            />
+          );
+        })}
+      </group>
       {clusters.map((c, idx) => {
         const colorA = c.colors[0] ?? '#ffffff';
         const colorB = c.colors[1] ?? colorA;
