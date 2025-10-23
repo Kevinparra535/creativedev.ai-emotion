@@ -29,7 +29,7 @@ const PRESETS: Record<string, VisualPreset> = {
   nostalgia: { colors: ['#C2A878', '#7E6B5A'], motion: 'recoil', particles: 'grain' },
 
   // Neutral/default
-  neutral: { colors: ['#556270', '#4ECDC4'], motion: 'neutral', particles: 'none' }
+  neutral: { colors: ['rgba(85, 98, 112, 0)', 'rgba(78, 205, 197, 0)'], motion: 'neutral', particles: 'none' }
 };
 
 export function getPresetForEmotion(label?: string | null): VisualPreset {

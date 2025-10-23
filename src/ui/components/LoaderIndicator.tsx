@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import styled from 'styled-components';
+import { fontSize, spacing } from '../styles/scssTokens';
 
 type Props = {
   reading: boolean;
@@ -39,22 +40,21 @@ const LoaderIndicator = ({ reading }: Props) => {
 
 const Indicator = styled(motion.output)`
   position: absolute;
-  bottom: 20px;
+  bottom: 10dvh;
   z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: ${spacing.space} ${spacing.space_x2};
+  border-radius: ${spacing.space_x5};
   color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  font-size: 13px;
-  line-height: 1;
+  font-size: ${fontSize(10)};
   backdrop-filter: blur(6px);
 `;
 

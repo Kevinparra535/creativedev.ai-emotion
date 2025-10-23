@@ -29,7 +29,7 @@ export const useEmotionEngine = (text: string, debounceMs = 350): State => {
     timerRef.current = globalThis.setTimeout(async () => {
       try {
         abortRef.current = new AbortController();
-        const emotion = await analyzeText(text, { signal: abortRef.current.signal });
+        const emotion = await analyzeText(text);
         setState({ emotion, analyzing: false });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'analysis-failed';

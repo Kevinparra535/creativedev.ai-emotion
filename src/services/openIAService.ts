@@ -1,4 +1,4 @@
-import config from '@/config/config';
+// OpenAI integration can be toggled in later iterations; keeping local heuristic as default.
 
 export type EmotionResponse = {
   label: string;
@@ -7,47 +7,42 @@ export type EmotionResponse = {
   arousal: number; // 0..1
 };
 
-type AnalyzeOptions = { signal?: AbortSignal };
+export async function analyzeText(text: string): Promise<EmotionResponse> {
+  return localHeuristic(text);
+  // if (!config.OPENAI_API_KEY) return localHeuristic(text);
 
-export async function analyzeText(
-  text: string,
-  options?: AnalyzeOptions
-): Promise<EmotionResponse> {
-  if (!config.OPENAI_API_KEY) return localHeuristic(text);
-
-  try {
-    const res = await fetch(`${config.OPENAI_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      signal: options?.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: config.OPENAI_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'Eres un clasificador de emoción. Devuelve JSON: {label, score, valence(-1..1), arousal(0..1)}'
-          },
-          { role: 'user', content: text }
-        ],
-        temperature: 0.2
-      })
-    });
-    if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
-    const data = await res.json();
-    const content: string = data.choices?.[0]?.message?.content ?? '';
-    console.log('OpenAI response data:', content);
-    return tryParseEmotion(content) ?? localHeuristic(text);
-  } catch {
-    console.error('[openIAService] analyzeText falling back to heuristic');
-    return localHeuristic(text);
-  }
+  // try {
+  //   const res = await fetch(`${config.OPENAI_BASE_URL}/chat/completions`, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       Authorization: `Bearer ${config.OPENAI_API_KEY}`
+  //     },
+  //     body: JSON.stringify({
+  //       model: config.OPENAI_MODEL,
+  //       messages: [
+  //         {
+  //           role: 'system',
+  //           content:
+  //             'Eres un clasificador de emoción. Devuelve JSON: {label, score, valence(-1..1), arousal(0..1)}'
+  //         },
+  //         { role: 'user', content: text }
+  //       ],
+  //       temperature: 0.2
+  //     })
+  //   });
+  //   if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
+  //   const data = await res.json();
+  //   const content: string = data.choices?.[0]?.message?.content ?? '';
+  //   console.log('OpenAI response data:', content);
+  //   return tryParseEmotion(content) ?? localHeuristic(text);
+  // } catch {
+  //   console.error('[openIAService] analyzeText falling back to heuristic');
+  //   return localHeuristic(text);
+  // }
 }
 
-function tryParseEmotion(s: string): EmotionResponse | null {
+export function tryParseEmotion(s: string): EmotionResponse | null {
   try {
     const match = /\{[\s\S]*\}/.exec(s);
     const json = match ? match[0] : null;

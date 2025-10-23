@@ -5,12 +5,10 @@ export const VizualiserRoot = styled.div`
   align-items: center;
   justify-content: center;
   position: absolute;
-  top: 25%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 35%;
-  height: 35%;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  top: 0%;
+  left: 0%;
+  width: 100%;
+  height: 100%;
   /* background-color: red; */
 `;
 
