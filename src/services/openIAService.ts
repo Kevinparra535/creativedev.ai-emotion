@@ -68,7 +68,7 @@ function tryParseEmotion(s: string): EmotionResponse | null {
 function localHeuristic(text: string): EmotionResponse {
   const t = text.toLowerCase();
   if (!t.trim()) return { label: 'neutral', score: 1, valence: 0, arousal: 0.2 };
-  const joy = /(feliz|alegr|gracias|amor|content|😊|😀)/.test(t);
+  const joy = /(feliz|felicidad|alegr|gracias|amor|content|😊|😀)/.test(t);
   const fear = /(miedo|ansied|nerv|preocup|😰|😱)/.test(t);
   const nostalgia = /(recuerdo|nostal|extraño|añoro|melanc)/.test(t);
   const anger = /(enojo|enojad|ira|rabia|furia|😡)/.test(t);

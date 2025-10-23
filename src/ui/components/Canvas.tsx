@@ -1,13 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import styled from 'styled-components';
-import { Leva, useControls, button } from 'leva';
+import { Leva, useControls, button, monitor } from 'leva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import Vizualizer from '@/scene/dom/Vizualizer';
 import LoaderIndicator from './LoaderIndicator';
 
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
+import { getPresetForEmotion } from '@/config/emotion-presets';
+import { hexToHsl } from '@/utils/color';
 
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 
@@ -37,17 +39,41 @@ const Canvas = () => {
 
   const { emotion, analyzing } = useEmotionEngine(text, 400);
 
+  // Transparency data (IA explanation, tags, palette)
+  const explanation = emotion
+    ? `Elegimos "${emotion.label}" por el tono general (valence ${emotion.valence.toFixed(2)}, arousal ${emotion.arousal.toFixed(2)}).`
+    : 'Escribe algo para analizar tu tono.';
+
+  const tagsFromEmotion = (e: typeof emotion): string[] => {
+    if (!e) return [];
+    const tags: string[] = [];
+    if (e.valence > 0.55) tags.push('euforia');
+    if (e.valence > 0.2 && e.arousal < 0.4) tags.push('calma');
+    if (e.arousal > 0.65 && e.valence < 0) tags.push('tensión');
+    if (e.label) tags.push(e.label);
+    return Array.from(new Set(tags));
+  };
+  const tags = tagsFromEmotion(emotion).join(', ');
+
+  const presetColors = getPresetForEmotion(emotion?.label).colors;
+  const paletteHsl = presetColors
+    .map((hex) => {
+      const hsl = hexToHsl(hex);
+      return hsl ? `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)` : hex;
+    })
+    .join('  |  ');
+
   // Leva controls (replaces SidePanel)
   const { style, intensity, speed, noise, grain } = useControls('Emotion Visuals', {
     style: {
       label: 'Style',
       value: 'Minimal',
-      options: ['Minimal', 'Dreamy', 'Cyber', 'Nature', 'Memphis', 'Glitch'],
+      options: ['Minimal', 'Dreamy', 'Cyber', 'Nature', 'Memphis', 'Glitch']
     },
     intensity: { value: 0.5, min: 0, max: 1, step: 0.01 },
     speed: { value: 0.5, min: 0, max: 1, step: 0.01 },
     noise: { value: 0.2, min: 0, max: 1, step: 0.01 },
-    grain: { value: 0.12, min: 0, max: 1, step: 0.01 },
+    grain: { value: 0.12, min: 0, max: 1, step: 0.01 }
   });
 
   useControls('Actions', {
@@ -71,8 +97,20 @@ const Canvas = () => {
       if (emotion?.label) url.searchParams.set('label', emotion.label);
       navigator.clipboard.writeText(url.toString());
       alert('Link copiado al portapapeles');
-    }),
+    })
   });
+
+  // Transparency (read-only) in Leva; monitors rebind when deps change
+  useControls(
+    'Transparency',
+    () => ({
+      Loading: monitor(() => reading || analyzing),
+      Explanation: monitor(() => explanation),
+      Tags: monitor(() => tags),
+      PaletteHSL: monitor(() => paletteHsl),
+    }),
+    [explanation, tags, paletteHsl, reading, analyzing]
+  );
 
   // Styles (keep for intro shape only)
 
@@ -164,7 +202,13 @@ const Canvas = () => {
 
   return (
     <CanvasRoot>
-  <Vizualizer emotion={emotion} analyzing={analyzing} intensity={intensity} speed={speed} grain={grain} />
+      <Vizualizer
+        emotion={emotion}
+        analyzing={analyzing}
+        intensity={intensity}
+        speed={speed}
+        grain={grain}
+      />
 
       <LoaderIndicator reading={reading || analyzing} />
 
