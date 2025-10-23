@@ -7,7 +7,7 @@ import {
   type ChangeEvent
 } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
-import { Leva } from 'leva';
+import { useAudioLeva } from '@/hooks/useAudioLeva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import LoaderIndicator from './LoaderIndicator';
@@ -19,13 +19,14 @@ import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
 import { useUniverse } from '@/state/universe.store';
 import { emotionService } from '@/services/EmotionServiceFactory';
+import config from '@/config/config';
 
 const MainScreen = () => {
   const [text, setText] = useState('');
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
   const [reading, setReading] = useState(false);
-  // const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
+  const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,6 +37,9 @@ const MainScreen = () => {
   const { emotion, analyzing } = useEmotionEngine(text, 400);
   const setCurrentEmotion = useEmotionStore((s) => s.setCurrent);
   const setUniverseData = useUniverse((s) => s.setData);
+
+  // Wire audio controls (Leva) and auto-resume on interaction
+  useAudioLeva();
 
   useEffect(() => {
     setCurrentEmotion(emotion ?? null);
@@ -60,15 +64,15 @@ const MainScreen = () => {
     };
   }, [text, setUniverseData]);
 
-  // const moveToBottom = useCallback(() => {
-  //   if (!inputRef.current) return;
-  //   void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
-  // }, [inputControls, shiftY]);
+  const moveToBottom = useCallback(() => {
+    if (!inputRef.current) return;
+    void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
+  }, [inputControls, shiftY]);
 
-  // const moveToTop = useCallback(() => {
-  //   if (!inputRef.current) return;
-  //   void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
-  // }, [inputControls]);
+  const moveToTop = useCallback(() => {
+    if (!inputRef.current) return;
+    void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
+  }, [inputControls]);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -80,19 +84,19 @@ const MainScreen = () => {
     typingTimer.current = globalThis.setTimeout(() => setReading(false), 700);
   }, []);
 
-  // useEffect(() => {
-  //   const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
-  //   window.addEventListener('resize', onResize);
-  //   return () => window.removeEventListener('resize', onResize);
-  // }, []);
+  useEffect(() => {
+    const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Measure input size on mount and on resize
 
-  // useEffect(() => {
-  //   if (text.length >= config.INPUT_SHIFT_THRESHOLD) moveToBottom();
-  //   else moveToTop();
-  //   // re-run when shiftY changes so position stays consistent across resizes
-  // }, [text, shiftY, moveToBottom, moveToTop]);
+  useEffect(() => {
+    if (text.length >= config.INPUT_SHIFT_THRESHOLD) moveToBottom();
+    else moveToTop();
+    // re-run when shiftY changes so position stays consistent across resizes
+  }, [text, shiftY, moveToBottom, moveToTop]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -197,9 +201,6 @@ const MainScreen = () => {
           placeholder='Describe how your feeling today...'
         />
       </motion.div>
-
-      {/* Leva panel */}
-      <Leva titleBar={{ title: 'Emotion Controls' }} />
     </MainRoot>
   );
 };

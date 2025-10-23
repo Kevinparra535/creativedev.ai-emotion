@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Text, useCursor, Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { getClusters } from '@/config/emotion-clusters';
+import { AudioManager } from '@/audio/AudioManager';
 import {
   makeOrbitPoints,
   makeArcPoints,
@@ -54,6 +55,8 @@ function Planet({
           ? (e) => {
               e.stopPropagation();
               setHovered(true);
+              // play hover sfx for this planet's label
+              AudioManager.playHoverForEmotion(label).catch(() => {});
             }
           : undefined
       }
@@ -311,7 +314,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   // Relax main planets to avoid overlaps between clusters
   const mainPositions = useMemo(
     () => relaxMainPositions(bases, boundRadii, layout, CENTER_SCALE),
-    [bases, boundRadii, layout]
+    [bases, boundRadii, layout, CENTER_SCALE]
   );
 
   // Intro timeline
