@@ -1,4 +1,5 @@
-import type { Emotion } from '@/domain/emotion';
+// NOTE: This module parses loose AI outputs. Do not import domain Emotion here.
+// We expose permissive shapes that upstream adapters convert into domain types.
 
 // Multi-emotion types (for graph-ready responses)
 export type MultiEmotionItem = {
@@ -71,43 +72,65 @@ export const promptToUser = (text: string) => {
   };
 };
 
-export function tryParseEmotion(s: string): Emotion | null {
+// Permissive single-emotion parsing result (upstream adapter will normalize)
+export type LooseEmotion = {
+  label: string;
+  score?: number;
+  valence?: number;
+  arousal?: number;
+  colors?: string[];
+  intensity?: number;
+  relations?: string[];
+};
+
+function toStringArray(x: unknown): string[] {
+  return Array.isArray(x) ? x.filter((c): c is string => typeof c === 'string') : [];
+}
+
+function extractColors(obj: Record<string, unknown>): string[] {
+  const fromColors = toStringArray(obj.colors);
+  if (fromColors.length) return fromColors;
+  return toStringArray(obj.color);
+}
+
+function extractRelations(obj: Record<string, unknown>): string[] {
+  const r = obj.relations;
+  if (r && typeof r === 'object' && !Array.isArray(r)) {
+    const entries = Object.entries(r).filter(([, v]) => typeof v === 'number') as [
+      string,
+      number
+    ][];
+    const sorted = [...entries].sort((a, b) => b[1] - a[1]);
+    return sorted.map(([k]) => k);
+  }
+  if (Array.isArray(r)) {
+    return r.filter((e): e is string => typeof e === 'string');
+  }
+  return [];
+}
+
+export function tryParseEmotion(s: string): LooseEmotion | null {
   try {
     const match = /\{[\s\S]*\}/.exec(s);
     const json = match ? match[0] : null;
     if (!json) return null;
-    const raw = JSON.parse(json) as any;
+    const raw = JSON.parse(json);
     if (!raw || typeof raw !== 'object') return null;
-    const label = typeof raw.label === 'string' ? raw.label : undefined;
+    const obj: Record<string, unknown> = raw as Record<string, unknown>;
+    const label = typeof obj.label === 'string' ? obj.label : undefined;
     if (!label) return null;
-
     // Accept both `colors` and legacy `color`
-    const colors: string[] = Array.isArray(raw.colors)
-      ? raw.colors.filter((c: unknown) => typeof c === 'string')
-      : Array.isArray(raw.color)
-        ? raw.color.filter((c: unknown) => typeof c === 'string')
-        : [];
-
+    const colors = extractColors(obj);
     // Accept relations as object map or array of strings, but return array of strings
-    let relations: string[] = [];
-    if (raw.relations && typeof raw.relations === 'object' && !Array.isArray(raw.relations)) {
-      const entries = Object.entries(raw.relations).filter(([, v]) => typeof v === 'number') as [
-        string,
-        number
-      ][];
-      // sort by weight desc and take keys
-      relations = entries.sort((a, b) => b[1] - a[1]).map(([k]) => k);
-    } else if (Array.isArray(raw.relations)) {
-      relations = (raw.relations as unknown[]).filter((e) => typeof e === 'string') as string[];
-    }
+    const relations = extractRelations(obj);
 
     return {
       label,
-      score: typeof raw.score === 'number' ? raw.score : 1,
-      valence: typeof raw.valence === 'number' ? raw.valence : 0,
-      arousal: typeof raw.arousal === 'number' ? raw.arousal : 0.5,
+      score: typeof obj.score === 'number' ? obj.score : 1,
+      valence: typeof obj.valence === 'number' ? obj.valence : 0,
+      arousal: typeof obj.arousal === 'number' ? obj.arousal : 0.5,
       colors,
-      intensity: typeof raw.intensity === 'number' ? raw.intensity : 0,
+      intensity: typeof obj.intensity === 'number' ? obj.intensity : 0,
       relations
     };
   } catch {
@@ -120,7 +143,7 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
     const match = /\{[\s\S]*\}/.exec(s);
     const json = match ? match[0] : null;
     if (!json) return null;
-    const raw = JSON.parse(json) as any;
+    const raw = JSON.parse(json);
     if (!raw || typeof raw !== 'object') return null;
 
     const emotionsRaw: any[] = Array.isArray(raw.emotions) ? raw.emotions : [];

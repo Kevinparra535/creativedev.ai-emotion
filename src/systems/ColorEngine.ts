@@ -10,6 +10,15 @@ export const ColorEngine = {
 
   fromEmotion(emotion: Emotion): THREE.Color {
     const colors = this.palette(emotion.label);
-    return colors.length > 0 ? new THREE.Color(colors[0]) : new THREE.Color(0xffffff);
+    if (colors.length > 0) {
+      const colorString = colors[0];
+      // Convert rgba to rgb to avoid THREE.Color alpha warning
+      const rgbColor = colorString.replace(/rgba?\(([^)]+)\)/, (match, values) => {
+        const [r, g, b] = values.split(',').map((v: string) => v.trim());
+        return `rgb(${r}, ${g}, ${b})`;
+      });
+      return new THREE.Color(rgbColor);
+    }
+    return new THREE.Color(0xffffff);
   }
 };
