@@ -3,6 +3,7 @@ import type { Emotion } from '@/domain/emotion';
 import type { Link } from '@/domain/link';
 import type { Galaxy } from '@/domain/galaxy';
 import { GraphBuilder } from '@/systems/GraphBuilder';
+import { clusterByPrimaries } from '@/systems/ClusterEngine';
 import { RuleEngine } from '@/systems/RuleEngine';
 import { mapAIToDomain } from '@/data/mappers';
 import { buildPayloadFromText, localHeuristic } from '@/ai/local-emotions';
@@ -58,7 +59,8 @@ const LocalEmotionService: EmotionService = {
     const { emotions, links } = await this.analyzeMulti(text);
     const ruleLinks = new RuleEngine({ id: 'base', rules: [] }).apply(emotions);
     const merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
-    const galaxies = GraphBuilder.clusterByValence(emotions);
+    // Prefer primary emotion galaxies (love/joy/fear/...) over coarse valence buckets
+    const galaxies = clusterByPrimaries(emotions);
     return { emotions, links: merged, galaxies };
   }
 };

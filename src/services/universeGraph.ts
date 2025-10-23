@@ -1,6 +1,7 @@
 import type { Emotion } from '@/domain/emotion';
 import { expandFromDominant, type MultiEmotionResult } from '@/ai/local-emotions';
 import { emotionService } from '@/services/EmotionServiceFactory';
+import { AFFECT_DEFAULTS } from '@/systems/ClusterEngine';
 /* eslint-disable complexity, no-negated-condition */
 
 export type UniverseNode = {
@@ -24,17 +25,7 @@ export type UniverseGraph = {
   summary: { valence: number; arousal: number };
 };
 
-// Default affective positioning for primaries (fallbacks if model doesn't provide per-node stats)
-const DEFAULT_AFFECT: Record<string, { valence: number; arousal: number }> = {
-  love: { valence: 0.85, arousal: 0.6 },
-  joy: { valence: 0.9, arousal: 0.7 },
-  calm: { valence: 0.6, arousal: 0.2 },
-  sadness: { valence: -0.7, arousal: 0.3 },
-  fear: { valence: -0.85, arousal: 0.8 },
-  anger: { valence: -0.7, arousal: 0.7 },
-  surprise: { valence: 0.2, arousal: 0.9 },
-  nostalgia: { valence: 0.2, arousal: 0.4 }
-};
+// Centralized affect defaults come from ClusterEngine (aligned with emotion-clusters)
 
 export function splitSentences(text: string): string[] {
   return text
@@ -127,8 +118,9 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
   for (const [label, weight] of weightMap) {
     const v = valSum.get(label);
     const a = aroSum.get(label);
-    const normV = v !== undefined ? v / weight : (DEFAULT_AFFECT[label]?.valence ?? 0);
-    const normA = a !== undefined ? a / weight : (DEFAULT_AFFECT[label]?.arousal ?? 0.5);
+    const def = AFFECT_DEFAULTS[label];
+    const normV = v !== undefined ? v / weight : (def?.valence ?? 0);
+    const normA = a !== undefined ? a / weight : (def?.arousal ?? 0.5);
     const colors = colorMap.get(label);
     nodes.push({ label, weight, valence: normV, arousal: normA, colors });
   }
