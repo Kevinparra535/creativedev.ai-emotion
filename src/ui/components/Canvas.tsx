@@ -19,7 +19,7 @@ import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
 import { useUniverse } from '@/state/universe.store';
-import { OpenIAAdapter } from '@/services/OpenIAAdapter';
+import { emotionService } from '@/services/EmotionServiceFactory';
 
 const AnimShape = styled(motion.div)`
   position: absolute;
@@ -60,7 +60,7 @@ const Canvas = () => {
     let cancelled = false;
   const timer = globalThis.setTimeout(async () => {
       try {
-        const { emotions, links, galaxies } = await OpenIAAdapter.analyzeToGraph(text);
+  const { emotions, links, galaxies } = await emotionService.analyzeToGraph(text);
         if (!cancelled) setUniverseData({ emotions, links, galaxies });
       } catch (err) {
         // non-fatal: keep previous universe data but surface in devtools
