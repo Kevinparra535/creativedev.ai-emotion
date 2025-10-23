@@ -114,16 +114,21 @@ export default function UniverseScene() {
     return ((h % 1000) / 1000 - 0.5) * 1.2; // ~[-0.6..0.6]
   };
 
+  // Base positions using graph affect if available, else defaults
   const nodes: Node[] = useMemo(() => {
+    const gmap = new Map<string, { valence: number; arousal: number }>();
+    (graph?.nodes ?? []).forEach((n) => {
+      gmap.set(n.label.toLowerCase(), { valence: n.valence, arousal: n.arousal });
+    });
     return PRIMARY.map((label) => {
       const [a, b] = colorFor(label);
-      const aff = AFFECT[label] ?? { valence: 0, arousal: 0.5 };
+      const aff = gmap.get(label) ?? AFFECT[label] ?? { valence: 0, arousal: 0.5 };
       const x = aff.valence * spreadX;
       const y = (aff.arousal - 0.5) * spreadY;
       const z = jitterFor(label);
       return { label, pos: new THREE.Vector3(x, y, z), colorA: a, colorB: b };
     });
-  }, []);
+  }, [graph?.nodes]);
 
   // Active set = current label + its relations mapped to primaries (for stronger glow)
   const activeSet = useMemo(() => {
@@ -136,8 +141,8 @@ export default function UniverseScene() {
     return set;
   }, [current?.label, current?.relations]);
 
-  // Semantic edges between primaries (soft connectivity)
-  const EDGES: Array<[string, string]> = [
+  // Fallback edges if no graph provided
+  const FALLBACK_EDGES: Array<[string, string]> = [
     ['love', 'joy'],
     ['joy', 'surprise'],
     ['calm', 'nostalgia'],
@@ -146,60 +151,121 @@ export default function UniverseScene() {
     ['anger', 'sadness']
   ];
 
+  
+
   // Optional weight map from graph to modulate size/brightness
   const weights = useMemo(() => {
     const map = new Map<string, number>();
-    const nodes = graph?.nodes ?? [];
+    const gnodes = graph?.nodes ?? [];
     let maxW = 0;
-    nodes.forEach((n) => {
+    gnodes.forEach((n) => {
       map.set(n.label.toLowerCase(), n.weight);
       if (n.weight > maxW) maxW = n.weight;
     });
-    // normalize to [0..1]
     if (maxW > 0) {
-      nodes.forEach((n) => map.set(n.label.toLowerCase(), n.weight / maxW));
+      gnodes.forEach((n) => map.set(n.label.toLowerCase(), n.weight / maxW));
     }
     return map;
   }, [graph?.nodes]);
 
+  // Compute radii and apply a tiny relaxation to avoid overlaps (keeps valence/arousal feel)
+  const layout = useMemo(() => {
+    const items = nodes.map((n) => {
+      const isActive = activeSet.has(n.label);
+      const w = weights.get(n.label) ?? 0;
+      const radius = (0.75 + w * 0.9) * (isActive ? 1.1 : 1.0);
+      const emissiveIntensity = (0.5 + w * 0.9) * (isActive ? 1.1 : 1.0);
+      return {
+        label: n.label,
+        pos: n.pos.clone(),
+        colorA: n.colorA,
+        colorB: n.colorB,
+        radius,
+        emissiveIntensity
+      };
+    });
+
+    // Relax positions slightly to avoid overlap
+    const iterations = 14;
+    for (let it = 0; it < iterations; it++) {
+      for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) {
+          const a = items[i];
+          const b = items[j];
+          const delta = new THREE.Vector3().subVectors(b.pos, a.pos);
+          const dist = Math.max(0.0001, delta.length());
+          const minDist = a.radius + b.radius + 0.6; // desired separation
+          if (dist < minDist) {
+            const push = (minDist - dist) * 0.08; // softness
+            const dir = delta.normalize();
+            a.pos.addScaledVector(dir, -push);
+            b.pos.addScaledVector(dir, push);
+          }
+        }
+      }
+    }
+    return items;
+  }, [nodes, weights, activeSet]);
+
+  // Helper to draw axes/grid
+  const grid = (
+    <group>
+      {/* X axis (valence) */}
+      <Line points={[new THREE.Vector3(-spreadX, 0, 0), new THREE.Vector3(spreadX, 0, 0)]} color={'#889'} opacity={0.25} transparent lineWidth={1} />
+      {/* Y axis (arousal) */}
+      <Line points={[new THREE.Vector3(0, -spreadY * 0.5, 0), new THREE.Vector3(0, spreadY * 0.5, 0)]} color={'#889'} opacity={0.25} transparent lineWidth={1} />
+      {/* ticks */}
+      {[-0.5, -0.25, 0.25, 0.5].map((t, i) => (
+        <Line key={`yt-${i}`} points={[new THREE.Vector3(-0.3, t * spreadY, 0), new THREE.Vector3(0.3, t * spreadY, 0)]} color={'#889'} opacity={0.2} transparent lineWidth={1} />
+      ))}
+      {/* labels */}
+      <Text position={[spreadX + 0.6, 0, 0]} fontSize={0.22} color={'#ccd'} anchorX="left" anchorY="middle">+valence</Text>
+      <Text position={[-spreadX - 0.6, 0, 0]} fontSize={0.22} color={'#ccd'} anchorX="right" anchorY="middle">-valence</Text>
+      <Text position={[0, spreadY * 0.5 + 0.6, 0]} fontSize={0.22} color={'#ccd'} anchorX="center" anchorY="bottom">high arousal</Text>
+      <Text position={[0, -spreadY * 0.5 - 0.6, 0]} fontSize={0.22} color={'#ccd'} anchorX="center" anchorY="top">low arousal</Text>
+    </group>
+  );
+
   return (
     <group>
-      {/* Edges */}
-      {EDGES.map(([a, b]) => {
-        const na = nodes.find((n) => n.label === a);
-        const nb = nodes.find((n) => n.label === b);
+      {grid}
+      {/* Edges: prefer graph edges if present */}
+      {(graph?.edges?.length ? graph.edges : FALLBACK_EDGES.map(([a, b]) => ({ source: a, target: b, weight: 1, type: 'semantic' as const }))).map((e, idx) => {
+        const a = (e as any).source ?? (e as any)[0];
+        const b = (e as any).target ?? (e as any)[1];
+        const na = layout.find((n) => n.label === a);
+        const nb = layout.find((n) => n.label === b);
         if (!na || !nb) return null;
         const isActive = activeSet.has(a) || activeSet.has(b);
+        const type = (e as any).type ?? 'semantic';
+        const opacity = isActive ? (type === 'cooccurrence' ? 0.42 : 0.35) : (type === 'cooccurrence' ? 0.22 : 0.16);
+        const width = type === 'cooccurrence' ? 1.8 : 1.2;
         return (
           <Line
-            key={`edge-${a}-${b}`}
+            key={`edge-${a}-${b}-${idx}`}
             points={[na.pos, nb.pos]}
             color={isActive ? '#ffffff' : na.colorA}
-            opacity={isActive ? 0.35 : 0.16}
+            opacity={opacity}
             transparent
-            lineWidth={isActive ? 1.5 : 1}
+            lineWidth={width}
           />
         );
       })}
 
       {/* Planets */}
-      {nodes.map((n) => {
-        const isActive = activeSet.has(n.label);
-        const w = weights.get(n.label) ?? 0;
-        const radius = (0.75 + w * 0.9) * (isActive ? 1.1 : 1.0);
-        const emissiveIntensity = (0.5 + w * 0.9) * (isActive ? 1.1 : 1.0);
-        return (
-          <Planet
-            key={`p-${n.label}`}
-            position={n.pos}
-            radius={radius}
-            colorA={n.colorA}
-            colorB={n.colorB}
-            label={n.label}
-            emissiveIntensity={emissiveIntensity}
-          />
-        );
-      })}
+      {layout.map((n) => (
+        <Planet
+          key={`p-${n.label}`}
+          position={n.pos}
+          radius={n.radius}
+          colorA={n.colorA}
+          colorB={n.colorB}
+          label={n.label}
+          emissiveIntensity={n.emissiveIntensity}
+        />
+      ))}
     </group>
   );
 }
+ 
+

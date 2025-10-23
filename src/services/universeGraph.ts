@@ -1,4 +1,5 @@
-import { analyzeText, type EmotionResponse } from '@/services/openIAService';
+import { analyzeText, analyzeTextMulti, type EmotionResponse } from '@/services/openIAService';
+import { expandFromDominant, type MultiEmotionResult } from '@/utils/iaUtiils';
 
 export type UniverseNode = {
   label: string;
@@ -45,55 +46,102 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
 
   // Accumulators
   const weightMap = new Map<string, number>();
-  let valenceSum = 0;
-  let arousalSum = 0;
-  let totalWeight = 0;
+  const valSum = new Map<string, number>();
+  const aroSum = new Map<string, number>();
+  const colorMap = new Map<string, string[]>();
+  let globalVal = 0;
+  let globalAro = 0;
+  let globalW = 0;
 
-  // NOTE: For now we call analyzeText per sentence and take the dominant emotion only.
-  // Future: switch analyzeText to return topK emotions per sentence.
+  const coCount = new Map<string, number>(); // 'a|b' -> count
+  const semanticSet = new Map<string, number>(); // 'a|b' -> count
+
+  // For each sentence, try multi-emotion analysis; fallback to single with expansion
   for (const s of sentences) {
     if (!s) continue;
-    let result: EmotionResponse | null = null;
+  let multi: MultiEmotionResult | null = null;
     try {
-      result = await analyzeText(s);
+      multi = await analyzeTextMulti(s);
     } catch {
-      result = null;
+      multi = null;
     }
-    if (!result) continue;
 
-    const label = result.label?.toLowerCase();
-    if (!label) continue;
-    const w = Math.max(0, Math.min(1, result.intensity ?? result.score ?? 0.6));
-    weightMap.set(label, (weightMap.get(label) ?? 0) + w);
+    if (!multi || !multi.emotions?.length) {
+      // fallback to dominant + expansion
+      let dom: EmotionResponse | null = null;
+      try {
+        dom = await analyzeText(s);
+      } catch {
+        dom = null;
+      }
+      if (dom) multi = expandFromDominant(dom);
+      else continue;
+    }
 
-    // Global affect (weighted)
-    valenceSum += (result.valence ?? 0) * w;
-    arousalSum += (result.arousal ?? 0.5) * w;
-    totalWeight += w;
+    // Aggregate sentence emotions
+    const emos = multi.emotions.slice(0, 8);
+    const labelsInSentence: string[] = [];
+    for (const e of emos) {
+      const label = e.label.toLowerCase();
+      const w = Math.max(0, Math.min(1, e.weight ?? 0));
+      if (w <= 0) continue;
+      weightMap.set(label, (weightMap.get(label) ?? 0) + w);
+      if (typeof e.valence === 'number') valSum.set(label, (valSum.get(label) ?? 0) + e.valence * w);
+      if (typeof e.arousal === 'number') aroSum.set(label, (aroSum.get(label) ?? 0) + e.arousal * w);
+      if (Array.isArray(e.colors) && e.colors.length && !colorMap.has(label)) colorMap.set(label, e.colors);
+      labelsInSentence.push(label);
+    }
+
+    // Global affect (weighted by sum of weights in sentence)
+  const sentW = emos.reduce((acc: number, e) => acc + (e.weight ?? 0), 0);
+    if (multi.global) {
+      if (typeof multi.global.valence === 'number') globalVal += multi.global.valence * sentW;
+      if (typeof multi.global.arousal === 'number') globalAro += multi.global.arousal * sentW;
+      globalW += sentW;
+    }
+
+    // Co-occurrence pairs (count once per sentence per pair)
+    for (let i = 0; i < labelsInSentence.length; i++) {
+      for (let j = i + 1; j < labelsInSentence.length; j++) {
+        const a = labelsInSentence[i];
+        const b = labelsInSentence[j];
+        const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+        coCount.set(key, (coCount.get(key) ?? 0) + 1);
+      }
+    }
+
+    // Semantic pairs provided by model
+    for (const p of multi.pairs ?? []) {
+      const [a, b] = p;
+      const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+      semanticSet.set(key, (semanticSet.get(key) ?? 0) + 1);
+    }
   }
 
   const nodes: UniverseNode[] = [];
   for (const [label, weight] of weightMap) {
-    const affect = DEFAULT_AFFECT[label] ?? { valence: 0, arousal: 0.5 };
-    nodes.push({ label, weight, valence: affect.valence, arousal: affect.arousal });
+    const v = valSum.get(label);
+    const a = aroSum.get(label);
+    const normV = v !== undefined ? v / weight : DEFAULT_AFFECT[label]?.valence ?? 0;
+    const normA = a !== undefined ? a / weight : DEFAULT_AFFECT[label]?.arousal ?? 0.5;
+    const colors = colorMap.get(label);
+    nodes.push({ label, weight, valence: normV, arousal: normA, colors });
   }
 
   // Semantic edges placeholder (can be enriched later)
-  const semanticPairs: Array<[string, string]> = [
-    ['love', 'joy'],
-    ['joy', 'surprise'],
-    ['calm', 'nostalgia'],
-    ['sadness', 'nostalgia'],
-    ['fear', 'anger'],
-    ['anger', 'sadness']
-  ];
-  const edges: UniverseEdge[] = semanticPairs
-    .filter(([a, b]) => weightMap.has(a) && weightMap.has(b))
-    .map(([a, b]) => ({ source: a, target: b, weight: 1, type: 'semantic' as const }));
+  const edges: UniverseEdge[] = [];
+  for (const [key, w] of coCount) {
+    const [a, b] = key.split('|');
+    if (weightMap.has(a) && weightMap.has(b)) edges.push({ source: a, target: b, weight: w, type: 'cooccurrence' });
+  }
+  for (const [key, w] of semanticSet) {
+    const [a, b] = key.split('|');
+    if (weightMap.has(a) && weightMap.has(b)) edges.push({ source: a, target: b, weight: w, type: 'semantic' });
+  }
 
   const summary = {
-    valence: totalWeight > 0 ? valenceSum / totalWeight : 0,
-    arousal: totalWeight > 0 ? arousalSum / totalWeight : 0.5
+    valence: globalW > 0 ? globalVal / globalW : 0,
+    arousal: globalW > 0 ? globalAro / globalW : 0.5
   };
 
   return { nodes, edges, summary };

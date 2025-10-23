@@ -1,35 +1,41 @@
 import type { EmotionResponse } from '@/services/openIAService';
 
+// Multi-emotion types (for graph-ready responses)
+export type MultiEmotionItem = {
+  label: string;
+  weight: number; // 0..1
+  valence?: number; // -1..1
+  arousal?: number; // 0..1
+  colors?: string[];
+  intensity?: number; // 0..1
+};
+
+export type MultiEmotionResult = {
+  emotions: MultiEmotionItem[];
+  global?: { valence?: number; arousal?: number };
+  pairs?: [string, string][]; // co-occurrence or semantic relations
+};
+
 export const promptToService = (): { role: string; content: string } => {
   return {
     role: 'system',
-    content: `
-    Eres un analizador emocional y visual.
-    Tu tarea es interpretar el texto recibido y devolver un JSON con los siguientes campos para visualizar emociones en un mapa 3D:
-
-    {
-      "label": "nombre_de_emoción_principal_en_inglés",
-      "score": "nivel de confianza (0..1)",
-      "valence": "nivel de positividad (-1..1)",
-      "arousal": "nivel de activación o energía (0..1)",
-      "colors": ["#HEX1", "#HEX2"],
-      "intensity": "intensidad visual (0..1, define brillo/tamaño)",
-      "relations": ["otras emociones relacionadas"]
-    }
-
-    Instrucciones:
-    - Si el texto expresa varias emociones, elige la dominante.
-    - Si el texto es neutro o ambiguo, usa label: "neutral".
-    - Los colores deben corresponder a la emoción (inspirados en la rueda de Plutchik).
-    - Usa valence positivo para emociones agradables (joy, love, gratitude, etc.)
-      y negativo para emociones desagradables (fear, sadness, anger, disgust).
-    - Usa arousal para indicar energía:
-      bajo = calma, alto = excitación o estrés.
-    - Devuelve solo JSON válido, sin texto adicional.
-`
+    content:
+      'Eres un analizador emocional. Devuelve SOLO JSON válido con este formato: {"emotions":[{"label":"joy","weight":0.62,"valence":0.8,"arousal":0.6,"colors":["#FFD54F"],"intensity":0.7}],"global":{"valence":0.25,"arousal":0.55},"pairs":[["joy","nostalgia"],["love","gratitude"]]}'
   };
 };
 
+export const promptToUser = (text: string) => {
+  return {
+    role: 'user',
+    content: `Analiza el siguiente texto.
+              - Devuelve hasta 8 emociones en "emotions" ordenadas por weight (0..1).
+              - "pairs" son co-ocurrencias o relaciones semánticas fuertes.
+              - Si una emoción está implícita por contexto (p.ej., nostalgia con recuerdo), inclúyela con weight bajo.
+
+              Texto: ${text}
+            `
+  };
+};
 
 export function tryParseEmotion(s: string): EmotionResponse | null {
   try {
@@ -45,8 +51,8 @@ export function tryParseEmotion(s: string): EmotionResponse | null {
     const colors: string[] = Array.isArray(raw.colors)
       ? raw.colors.filter((c: unknown) => typeof c === 'string')
       : Array.isArray(raw.color)
-      ? raw.color.filter((c: unknown) => typeof c === 'string')
-      : [];
+        ? raw.color.filter((c: unknown) => typeof c === 'string')
+        : [];
 
     // Accept relations as object map or array of strings, but return array of strings
     let relations: string[] = [];
@@ -73,6 +79,76 @@ export function tryParseEmotion(s: string): EmotionResponse | null {
   } catch {
     return null;
   }
+}
+
+export function tryParseMulti(s: string): MultiEmotionResult | null {
+  try {
+    const match = /\{[\s\S]*\}/.exec(s);
+    const json = match ? match[0] : null;
+    if (!json) return null;
+    const raw = JSON.parse(json) as any;
+    if (!raw || typeof raw !== 'object') return null;
+
+    const emotionsRaw: any[] = Array.isArray(raw.emotions) ? raw.emotions : [];
+    const emotions: MultiEmotionItem[] = emotionsRaw
+      .map((e) => ({
+        label: typeof e.label === 'string' ? e.label.toLowerCase() : undefined,
+        weight: typeof e.weight === 'number' ? e.weight : typeof e.score === 'number' ? e.score : 0,
+        valence: typeof e.valence === 'number' ? e.valence : undefined,
+        arousal: typeof e.arousal === 'number' ? e.arousal : undefined,
+        colors: Array.isArray(e.colors)
+          ? e.colors.filter((c: unknown) => typeof c === 'string')
+          : Array.isArray(e.color)
+            ? e.color.filter((c: unknown) => typeof c === 'string')
+            : undefined,
+        intensity: typeof e.intensity === 'number' ? e.intensity : undefined
+      }))
+      .filter((e) => e.label && e.weight > 0) as MultiEmotionItem[];
+
+    const global = raw.global && typeof raw.global === 'object' ? {
+      valence: typeof raw.global.valence === 'number' ? raw.global.valence : undefined,
+      arousal: typeof raw.global.arousal === 'number' ? raw.global.arousal : undefined
+    } : undefined;
+
+    const pairs: [string, string][] = Array.isArray(raw.pairs)
+      ? (raw.pairs
+          .map((p: any) =>
+            Array.isArray(p) && p.length >= 2 && typeof p[0] === 'string' && typeof p[1] === 'string'
+              ? [p[0].toLowerCase(), p[1].toLowerCase()]
+              : null
+          )
+          .filter(Boolean) as [string, string][])
+      : [];
+
+    return { emotions, global, pairs };
+  } catch {
+    return null;
+  }
+}
+
+// Fallback: expand single dominant into a small multi list using relations
+export function expandFromDominant(d: EmotionResponse): MultiEmotionResult {
+  const baseW = Math.max(0, Math.min(1, d.intensity ?? d.score ?? 0.6));
+  const emotions: MultiEmotionItem[] = [
+    {
+      label: d.label.toLowerCase(),
+      weight: Math.min(1, baseW),
+      valence: d.valence,
+      arousal: d.arousal,
+      colors: d.colors,
+      intensity: d.intensity
+    }
+  ];
+  const rels = (d.relations ?? []).slice(0, 5);
+  for (let i = 0; i < rels.length; i++) {
+    const r = rels[i].toLowerCase();
+    const w = baseW * (0.25 + 0.25 * (1 - i / rels.length)); // 25–50% decaying
+    emotions.push({ label: r, weight: w });
+  }
+  const pairs: [string, string][] = emotions
+    .slice(1)
+    .map((e) => [emotions[0].label, e.label]);
+  return { emotions, global: { valence: d.valence, arousal: d.arousal }, pairs };
 }
 
 export function localHeuristic(text: string): EmotionResponse {
