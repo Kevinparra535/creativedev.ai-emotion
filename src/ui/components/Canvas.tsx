@@ -41,7 +41,7 @@ const Canvas = () => {
   // const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const typingTimer = useRef<number | null>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const controls = useAnimationControls();
   const inputControls = useAnimationControls();
@@ -58,18 +58,18 @@ const Canvas = () => {
   useEffect(() => {
     if (!text || !text.trim()) return;
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
+  const timer = globalThis.setTimeout(async () => {
       try {
         const { emotions, links, galaxies } = await OpenIAAdapter.analyzeToGraph(text);
         if (!cancelled) setUniverseData({ emotions, links, galaxies });
       } catch (err) {
-        // non-fatal: keep previous universe data
-        // console.warn('[Canvas] analyzeToGraph failed', err);
+        // non-fatal: keep previous universe data but surface in devtools
+        console.warn('[Canvas] analyzeToGraph failed', err);
       }
     }, 450);
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+  globalThis.clearTimeout(timer);
     };
   }, [text, setUniverseData]);
 
@@ -89,8 +89,8 @@ const Canvas = () => {
 
   const onType = useCallback(() => {
     setReading(true);
-    if (typingTimer.current) window.clearTimeout(typingTimer.current);
-    typingTimer.current = window.setTimeout(() => setReading(false), 700);
+  if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
+  typingTimer.current = globalThis.setTimeout(() => setReading(false), 700);
   }, []);
 
   // useEffect(() => {
@@ -136,7 +136,7 @@ const Canvas = () => {
       el.removeEventListener('input', onType);
       el.removeEventListener('keydown', onType);
 
-      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+  if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
     };
   }, [onType]);
 

@@ -2,11 +2,14 @@ import * as THREE from 'three';
 
 export function hashLabel(label: string) {
   let h = 0;
-  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) | 0;
+  for (let i = 0; i < label.length; i++) {
+    const cp = label.codePointAt(i) ?? 0;
+    h = Math.trunc(h * 31 + cp);
+  }
   return h >>> 0;
 }
 
-export function jitter(label: string, scale = 1.0) {
+export function jitter(label: string, scale = 1) {
   const h = hashLabel(label);
   return ((h % 1000) / 1000 - 0.5) * scale;
 }

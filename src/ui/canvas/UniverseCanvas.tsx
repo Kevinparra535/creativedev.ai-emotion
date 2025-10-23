@@ -8,7 +8,7 @@ export default function UniverseCanvas() {
       <PerformanceMonitor />
       <color attach='background' args={['#0b1020']} />
       <ambientLight intensity={0.6} />
-      <directionalLight position={[20, 30, 10]} intensity={1.0} />
+  <directionalLight position={[20, 30, 10]} intensity={1} />
       <UniverseScene />
       <OrbitControls makeDefault />
       <Stats />

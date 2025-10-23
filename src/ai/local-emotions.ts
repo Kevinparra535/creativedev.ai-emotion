@@ -44,10 +44,6 @@ function normLabel(s: string) {
   return s.toLowerCase().trim().replace(/\s+/g, '_');
 }
 
-function uniq<T>(arr: T[]): T[] {
-  return Array.from(new Set(arr));
-}
-
 function sanitizeItem(e: MultiEmotionItem): MultiEmotionItem {
   const label = normLabel(e.label);
   const weight = clamp01(e.weight);
@@ -104,9 +100,7 @@ export function expandFromDominant(d: Emotion): MultiEmotionResult {
 
   // pairs = seed con cada secundario real presente
   const root = finalList[0]?.label ?? 'neutral';
-  const pairs: [string, string][] = finalList
-    .slice(1)
-    .map((e) => [root, e.label] as [string, string]);
+  const pairs: [string, string][] = finalList.slice(1).map((e) => [root, e.label] as [string, string]);
 
   // global = del dominante
   const global = {
@@ -145,10 +139,7 @@ export function localHeuristic(text: string): Emotion {
     };
 
   // === Patrones primarios ===
-  const joy =
-    /(feliz|felicidad|alegr|content|sonrisa|gracias|amor|diver|entusias|esperanz|😊|😀|🥰|😍)/.test(
-      t
-    );
+  const joy = /(feliz|felicidad|alegr|content|sonrisa|gracias|amor|diver|entusias|esperanz|😊|😀|🥰|😍)/.test(t);
   const calm = /(calma|tranquil|relajad|seren|paz|equilibri|control|🧘‍♂️|🌿)/.test(t);
   const sadness = /(triste|deprim|lloro|pena|soledad|fracaso|perd|😢|😭|💔)/.test(t);
   const fear = /(miedo|ansied|nerv|preocup|insegur|temor|😨|😰|😱)/.test(t);

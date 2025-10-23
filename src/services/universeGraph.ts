@@ -1,5 +1,5 @@
 import type { Emotion } from '@/domain/emotion';
-import { expandFromDominant, type MultiEmotionResult } from '@/utils/iaUtiils';
+import { expandFromDominant, type MultiEmotionResult } from '@/ai/local-emotions';
 import { OpenIAAdapter } from '@/services/OpenIAAdapter';
 /* eslint-disable complexity, no-negated-condition */
 
