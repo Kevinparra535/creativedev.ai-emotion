@@ -11,11 +11,9 @@ import styled from 'styled-components';
 import { Leva } from 'leva';
 
 import PromptInput from '@/features/prompt/PromptInput';
-import Vizualizer from '@/scene/dom/Vizualizer';
 import LoaderIndicator from './LoaderIndicator';
 
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
-import { useEmotionLeva } from './controls/useEmotionLeva';
 
 import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import config from '@/config/config';
@@ -46,8 +44,7 @@ const Canvas = () => {
   const controls = useAnimationControls();
   const inputControls = useAnimationControls();
 
-  const { emotion, analyzing } = useEmotionEngine(text, 400);
-  const { intensity, speed, grain } = useEmotionLeva(emotion, reading, analyzing);
+  const { analyzing } = useEmotionEngine(text, 400);
 
   const moveToBottom = useCallback(() => {
     if (!inputRef.current) return;
@@ -162,21 +159,18 @@ const Canvas = () => {
 
   return (
     <CanvasRoot>
-      <Vizualizer
-        speed={speed}
-        grain={grain}
-        emotion={emotion}
-        analyzing={analyzing}
-        intensity={intensity}
-      />
-
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
       {/* input on top (fades in after intro) */}
       <motion.div
         initial={{ opacity: 0, y: 0 }}
         animate={inputControls}
-        style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
       >
         <LoaderIndicator reading={reading || analyzing} />
 

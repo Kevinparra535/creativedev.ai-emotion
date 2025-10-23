@@ -136,6 +136,7 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Estilos para canvas de Three.js */
   canvas {
+    position: fixed !important;
     display: block;
     width: 100% !important;
     height: 100% !important;

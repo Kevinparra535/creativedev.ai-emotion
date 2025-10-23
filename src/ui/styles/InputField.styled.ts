@@ -1,5 +1,5 @@
 import styled, { keyframes } from 'styled-components';
-import { fonts, fontSize, spacing } from './scssTokens';
+import { fonts, spacing } from './scssTokens';
 
 // Wrapper to stack highlights behind the textarea
 export const HighlightWrapper = styled.div`

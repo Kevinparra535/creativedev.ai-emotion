@@ -23,6 +23,7 @@
     "react-dom": "^19.1.1",
     "styled-components": "^6.1.19",
     "three": "^0.180.0",
+    "three-stdlib": "^2.36.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
