@@ -13,8 +13,8 @@
  * debouncedLog("Hello"); // Will only execute after 300ms of no further calls
  * ```
  */
-const debounce = <T extends (...args: any[]) => void>(func: T, wait: number): T => {
-  let timeout: ReturnType<typeof setTimeout> | null;
+const debounce = <T extends (...args: unknown[]) => void>(func: T, wait: number): T => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return ((...args: Parameters<T>) => {
     if (timeout) {
       clearTimeout(timeout);

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import styled from 'styled-components';
+import { Leva, useControls, button } from 'leva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import Vizualizer from '@/scene/dom/Vizualizer';
@@ -35,6 +36,45 @@ const Canvas = () => {
   const inputControls = useAnimationControls();
 
   const { emotion, analyzing } = useEmotionEngine(text, 400);
+
+  // Leva controls (replaces SidePanel)
+  const { style, intensity, speed, noise, grain } = useControls('Emotion Visuals', {
+    style: {
+      label: 'Style',
+      value: 'Minimal',
+      options: ['Minimal', 'Dreamy', 'Cyber', 'Nature', 'Memphis', 'Glitch'],
+    },
+    intensity: { value: 0.5, min: 0, max: 1, step: 0.01 },
+    speed: { value: 0.5, min: 0, max: 1, step: 0.01 },
+    noise: { value: 0.2, min: 0, max: 1, step: 0.01 },
+    grain: { value: 0.12, min: 0, max: 1, step: 0.01 },
+  });
+
+  useControls('Actions', {
+    Save: button(() => {
+      try {
+        const key = `preset:${Date.now()}`;
+        const data = { style, intensity, speed, noise, grain, emotion };
+        localStorage.setItem(key, JSON.stringify(data));
+        alert('Preset guardado');
+      } catch (err) {
+        console.warn('Failed to save preset', err);
+      }
+    }),
+    Share: button(() => {
+      const url = new URL(location.href);
+      url.searchParams.set('style', String(style));
+      url.searchParams.set('intensity', String(intensity));
+      url.searchParams.set('speed', String(speed));
+      url.searchParams.set('noise', String(noise));
+      url.searchParams.set('grain', String(grain));
+      if (emotion?.label) url.searchParams.set('label', emotion.label);
+      navigator.clipboard.writeText(url.toString());
+      alert('Link copiado al portapapeles');
+    }),
+  });
+
+  // Styles (keep for intro shape only)
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value);
@@ -124,7 +164,7 @@ const Canvas = () => {
 
   return (
     <CanvasRoot>
-      <Vizualizer emotion={emotion} analyzing={analyzing} />
+  <Vizualizer emotion={emotion} analyzing={analyzing} intensity={intensity} speed={speed} grain={grain} />
 
       <LoaderIndicator reading={reading || analyzing} />
 
@@ -140,6 +180,9 @@ const Canvas = () => {
           placeholder='Describe how your feeling today...'
         />
       </motion.div>
+
+      {/* Leva panel */}
+      <Leva collapsed titleBar={{ title: 'Emotion Controls' }} />
     </CanvasRoot>
   );
 };
