@@ -13,6 +13,7 @@ import {
   type ClustersLayout as UtilLayout,
   type EnergyLinkAgg
 } from '../../utils/sceneUtils';
+import config from '@/config/config';
 
 export type ClustersLayout = UtilLayout;
 
@@ -108,14 +109,18 @@ function jitterZ(seed: number) {
   return ((r % 1) - 0.5) * 0; // widen depth jitter [-0.6..0.6]
 }
 
-function OrbitLine({ points, color }: Readonly<{ points: THREE.Vector3[]; color: string }>) {
+function OrbitLine({
+  points,
+  color,
+  opacityFactor = 1
+}: Readonly<{ points: THREE.Vector3[]; color: string; opacityFactor?: number }>) {
   return (
     <Line
       points={points}
       color={color}
       lineWidth={1}
       transparent
-      opacity={0.25}
+      opacity={0.25 * Math.max(0, Math.min(1, opacityFactor))}
       depthWrite={false}
     />
   );
@@ -130,6 +135,8 @@ type OrbitingSatelliteProps = {
   layout: ClustersLayout;
   phase0: number; // initial phase
   speed: number; // radians per second (parametric)
+  introZOffset?: number; // additional z offset for intro
+  introScale?: number; // scale-in for intro
   planet: Omit<PlanetProps, 'position'>;
 };
 
@@ -142,6 +149,8 @@ function OrbitingSatellite({
   layout,
   phase0,
   speed,
+  introZOffset = 0,
+  introScale = 1,
   planet
 }: Readonly<OrbitingSatelliteProps>) {
   const groupRef = useRef<THREE.Group>(null);
@@ -167,8 +176,13 @@ function OrbitingSatellite({
     if (layout !== 'arrow') local.applyEuler(euler);
     const px = center.x + local.x;
     const py = center.y + local.y;
-    const pz = layout === 'arrow' ? center.z : center.z + local.z;
-    if (groupRef.current) groupRef.current.position.set(px, py, pz);
+    let pz = layout === 'arrow' ? center.z : center.z + local.z;
+    pz += introZOffset;
+    if (groupRef.current) {
+      groupRef.current.position.set(px, py, pz);
+      groupRef.current.scale.setScalar(introScale);
+      groupRef.current.visible = introScale > 0.01;
+    }
   });
 
   return (
@@ -235,15 +249,22 @@ function EnergyPulse({
 }
 
 export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout }>) {
+  const {
+    PLANET_DUR,
+    SAT_DELAY,
+    SAT_DUR,
+    ORBIT_DELAY,
+    ORBIT_DUR,
+    ENERGY_DELAY,
+    ENERGY_DUR,
+    CENTER_SCALE
+  } = config;
   const { layout = 'centers' } = props;
   const clusters = useMemo(() => getClusters(), []);
 
   // Layout spreads for 'affect' mapping
   const spreadX = 7.5; // slightly larger to reduce collisions on affect layout
   const spreadY = 6.8;
-
-  // Global main-planets spacing multiplier (applies to both layouts)
-  const CENTER_SCALE = 3; // increase distance between cluster centers
 
   // Precompute base positions per layout
   const bases = useMemo(() => {
@@ -293,6 +314,34 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     [bases, boundRadii, layout]
   );
 
+  // Intro timeline
+  const [intro, setIntro] = useState({ tPlanet: 0, tSat: 0, tOrbit: 0, tEnergy: 0 });
+  const introStartRef = useRef<number | null>(null);
+  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+  const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+  useFrame(() => {
+    const now = performance.now();
+    if (introStartRef.current == null) introStartRef.current = now;
+    const elapsed = (now - introStartRef.current) / 1000;
+
+    const tPlanet = easeOutCubic(clamp01(elapsed / PLANET_DUR));
+    const tSat = easeOutCubic(clamp01((elapsed - SAT_DELAY) / SAT_DUR));
+    const tOrbit = easeOutCubic(clamp01((elapsed - ORBIT_DELAY) / ORBIT_DUR));
+    const tEnergy = easeOutCubic(clamp01((elapsed - ENERGY_DELAY) / ENERGY_DUR));
+
+    setIntro((prev) => {
+      if (
+        prev.tPlanet === tPlanet &&
+        prev.tSat === tSat &&
+        prev.tOrbit === tOrbit &&
+        prev.tEnergy === tEnergy
+      )
+        return prev;
+      return { tPlanet, tSat, tOrbit, tEnergy };
+    });
+  });
+
   // Energy links only between main planets (primary emotions)
   const energyLinks = useMemo<EnergyLinkAgg[]>(
     () => computePrimaryEnergyLinks(clusters),
@@ -304,13 +353,25 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
       {/* Energy links between main planets (only primaries) */}
       <group>
         {energyLinks.map((el, i) => {
-          const aPos = mainPositions[el.aIndex];
-          const bPos = mainPositions[el.bIndex];
+          const zStart = 140; // behind camera (~100)
+          const aBase = mainPositions[el.aIndex];
+          const bBase = mainPositions[el.bIndex];
+          const aPos = new THREE.Vector3(
+            aBase.x,
+            aBase.y,
+            aBase.z + (zStart - aBase.z) * (1 - intro.tPlanet)
+          );
+          const bPos = new THREE.Vector3(
+            bBase.x,
+            bBase.y,
+            bBase.z + (zStart - bBase.z) * (1 - intro.tPlanet)
+          );
           const { points, ctrl } = makeArcPoints(aPos, bPos, 0.28, 72, layout);
           const colA = el.colA;
           const colB = el.colB;
           const vColors = gradientColors(colA, colB, points.length);
-          const opacity = Math.min(0.9, 0.22 + el.weight * 0.5);
+          const baseOpacity = Math.min(0.9, 0.22 + el.weight * 0.5);
+          const opacity = baseOpacity * intro.tEnergy;
           const width = linkWidthForKind(el.kind);
 
           const key = `energy-${el.kind}-${el.aIndex}-${el.bIndex}-${i}`;
@@ -323,27 +384,32 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                 transparent
                 opacity={opacity}
                 depthWrite={false}
+                visible={intro.tEnergy > 0.02}
               />
-              <EnergyPulse
-                a={aPos}
-                b={bPos}
-                ctrl={ctrl}
-                colorA={colA}
-                colorB={colB}
-                speed={0.35 + el.weight * 0.25}
-                size={0.11}
-                phase={(i * 0.17) % 1}
-              />
-              <EnergyPulse
-                a={bPos}
-                b={aPos}
-                ctrl={ctrl}
-                colorA={colB}
-                colorB={colA}
-                speed={0.28 + el.weight * 0.2}
-                size={0.085}
-                phase={(i * 0.41) % 1}
-              />
+              {intro.tEnergy > 0.5 && (
+                <>
+                  <EnergyPulse
+                    a={aPos}
+                    b={bPos}
+                    ctrl={ctrl}
+                    colorA={colA}
+                    colorB={colB}
+                    speed={0.35 + el.weight * 0.25}
+                    size={0.11}
+                    phase={(i * 0.17) % 1}
+                  />
+                  <EnergyPulse
+                    a={bPos}
+                    b={aPos}
+                    ctrl={ctrl}
+                    colorA={colB}
+                    colorB={colA}
+                    speed={0.28 + el.weight * 0.2}
+                    size={0.085}
+                    phase={(i * 0.41) % 1}
+                  />
+                </>
+              )}
             </group>
           );
         })}
@@ -353,7 +419,13 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         const colorB = c.colors[1] ?? colorA;
         const mainRadius = mainRadii[idx];
 
-        const pos = mainPositions[idx].clone();
+        const base = mainPositions[idx];
+        const zStart = 140; // behind camera (~100)
+        const pos = new THREE.Vector3(
+          base.x,
+          base.y,
+          base.z + (zStart - base.z) * (1 - intro.tPlanet)
+        );
 
         const satLabels: string[] = (
           c.synonyms && c.synonyms.length ? c.synonyms : ['s1', 's2', 's3', 's4', 's5', 's6']
@@ -416,7 +488,12 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         return (
           <group key={c.key}>
             {orbitPointsList.map((pts, oi) => (
-              <OrbitLine key={`${c.key}-orbit-${oi}`} points={pts} color={colorA} />
+              <OrbitLine
+                key={`${c.key}-orbit-${oi}`}
+                points={pts}
+                color={colorA}
+                opacityFactor={intro.tOrbit}
+              />
             ))}
 
             <Planet
@@ -438,6 +515,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                 layout={layout}
                 phase0={s.phase0}
                 speed={0.08 + 0.015 * Math.sin((si + 1) * 1.234 + idx * 0.77)}
+                introZOffset={(1 - intro.tSat) * 100}
+                introScale={0.6 + 0.4 * intro.tSat}
                 planet={{
                   colorA: s.colorA,
                   colorB: s.colorB,
