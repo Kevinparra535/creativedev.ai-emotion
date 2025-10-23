@@ -3,6 +3,7 @@ import { CanvasRoot } from '@/ui/styles/Canvas.styled';
 import styled from 'styled-components';
 import { motion, useAnimationControls } from 'framer-motion';
 import PromptInput from './PromptInput';
+import Vizualizer from './Vizualizer';
 
 const AnimShape = styled(motion.div)`
   position: absolute;
@@ -75,10 +76,7 @@ const Canvas = () => {
       if (cancelled) return;
       setShowShape(false);
       // reveal input
-      await inputControls.start(
-        { opacity: 1, y: 0 },
-        { duration: 0.35, ease: 'easeInOut' }
-      );
+      await inputControls.start({ opacity: 1, y: 0 }, { duration: 0.35, ease: 'easeInOut' });
     };
     run();
     return () => {
@@ -88,11 +86,13 @@ const Canvas = () => {
 
   return (
     <CanvasRoot>
+      <Vizualizer />
+
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
       {/* input on top (fades in after intro) */}
       <motion.div initial={{ opacity: 0, y: 0 }} animate={inputControls}>
-        <PromptInput type='text' placeholder='Type something…' ref={inputRef} />
+        <PromptInput type='text' placeholder='Describe how your feeling today...' ref={inputRef} />
       </motion.div>
     </CanvasRoot>
   );
