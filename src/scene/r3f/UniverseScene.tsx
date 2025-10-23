@@ -5,7 +5,24 @@ import { Line } from '@react-three/drei';
 import { getPresetForEmotion } from '@/config/emotion-presets';
 import { useEmotionStore } from '@/stores/emotionStore';
 
-const PRIMARY: string[] = ['love', 'joy', 'calm', 'sadness', 'fear', 'anger', 'surprise', 'nostalgia'];
+type Props = {
+  baseColor: string;
+  radius: number;
+  speed: number;
+  size: number;
+  phase?: number;
+};
+
+const PRIMARY: string[] = [
+  'love',
+  'joy',
+  'calm',
+  'sadness',
+  'fear',
+  'anger',
+  'surprise',
+  'nostalgia'
+];
 
 type Node = {
   label: string;
@@ -17,28 +34,43 @@ type Node = {
 function ringPositions(count: number, radius = 6, phase = 0) {
   return new Array(count).fill(0).map((_, i) => {
     const t = (i / count) * Math.PI * 2 + phase;
-    return new THREE.Vector3(Math.cos(t) * radius, Math.sin(t) * radius * 0.4, Math.sin(t) * radius * 0.2);
+    return new THREE.Vector3(
+      Math.cos(t) * radius,
+      Math.sin(t) * radius * 0.4,
+      Math.sin(t) * radius * 0.2
+    );
   });
 }
 
 function colorFor(label: string) {
   const preset = getPresetForEmotion(label);
-  return [preset.colors[0] ?? '#ffffff', preset.colors[1] ?? preset.colors[0] ?? '#ffffff'] as [string, string];
+  return [preset.colors[0] ?? '#ffffff', preset.colors[1] ?? preset.colors[0] ?? '#ffffff'] as [
+    string,
+    string
+  ];
 }
 
-function Satellite({ baseColor, radius, speed, size, phase = 0 }: { baseColor: string; radius: number; speed: number; size: number; phase?: number }) {
+function Satellite({ baseColor, radius, speed, size, phase = 0 }: Readonly<Props>) {
   const ref = useRef<THREE.Group>(null!);
+
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime() * speed + phase;
     const x = Math.cos(t) * radius;
     const z = Math.sin(t) * radius;
     ref.current.position.set(x, 0, z);
   });
+
   return (
     <group ref={ref}>
       <mesh>
         <sphereGeometry args={[size, 24, 24]} />
-        <meshStandardMaterial color={baseColor} emissive={baseColor} emissiveIntensity={0.4} roughness={0.6} metalness={0.05} />
+        <meshStandardMaterial
+          color={baseColor}
+          emissive={baseColor}
+          emissiveIntensity={0.4}
+          roughness={0.6}
+          metalness={0.05}
+        />
       </mesh>
     </group>
   );
@@ -59,6 +91,8 @@ export default function UniverseScene() {
   const activeLabel = current?.label?.toLowerCase();
   const arousal = current?.arousal ?? 0.3; // 0..1
   const valence = current?.valence ?? 0; // -1..1
+  const activeColors = current?.colors && current.colors.length > 0 ? current.colors : undefined;
+  const intensity = current?.intensity ?? 0.6;
 
   // Satellite count/speed from arousal
   const satCount = Math.max(2, Math.min(7, Math.round(2 + arousal * 6)));
@@ -92,14 +126,22 @@ export default function UniverseScene() {
       {nodes.map((n) => {
         const isActive = activeLabel === n.label || (activeLabel && n.label.includes(activeLabel));
         const scale = isActive ? scaleBase : 1;
-        const emissive = isActive ? 0.9 : 0.35;
-        const color = n.colorA;
+        const emissive = isActive ? Math.min(1, 0.45 + intensity * 0.7) : 0.35;
+        const color = isActive && activeColors ? (activeColors[0] ?? n.colorA) : n.colorA;
+        const secondary =
+          isActive && activeColors ? (activeColors[1] ?? activeColors[0] ?? n.colorB) : n.colorB;
         return (
           <group key={n.label} position={n.pos.toArray()}>
             {/* planet */}
             <mesh scale={scale} castShadow receiveShadow>
               <sphereGeometry args={[0.85, 48, 48]} />
-              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={emissive} roughness={0.45} metalness={0.2} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={emissive}
+                roughness={0.45}
+                metalness={0.2}
+              />
             </mesh>
 
             {/* halo */}
@@ -109,9 +151,19 @@ export default function UniverseScene() {
             </mesh>
 
             {/* satellites (only on active) */}
-            {isActive && new Array(satCount).fill(0).map((_, i) => (
-              <Satellite key={`sat-${i}`} baseColor={n.colorB} radius={1.6 + i * 0.35} speed={satSpeed * (1 + i * 0.05)} size={0.1 + i * 0.03} phase={i * 0.7} />
-            ))}
+            {isActive &&
+              new Array(satCount)
+                .fill(0)
+                .map((_, i) => (
+                  <Satellite
+                    key={`sat-${i}`}
+                    baseColor={secondary}
+                    radius={1.6 + i * 0.35}
+                    speed={satSpeed * (1 + i * 0.05)}
+                    size={0.1 + i * 0.03}
+                    phase={i * 0.7}
+                  />
+                ))}
           </group>
         );
       })}
