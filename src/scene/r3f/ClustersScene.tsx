@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { Text } from '@react-three/drei';
+import { Text, useCursor, Line } from '@react-three/drei';
 import { getClusters } from '@/config/emotion-clusters';
 
 export type ClustersLayout = 'centers' | 'affect' | 'arrow';
@@ -12,6 +12,8 @@ type PlanetProps = {
   label: string;
   radius?: number;
   emissiveIntensity?: number;
+  interactive?: boolean;
+  hoverEmissive?: number; // optional emissive intensity when hovered
 };
 
 function Planet({
@@ -19,21 +21,53 @@ function Planet({
   colorA,
   colorB,
   label,
-  radius = 0.9,
-  emissiveIntensity = 0.75
+  radius = 1,
+  emissiveIntensity = 0.75,
+  interactive = true,
+  hoverEmissive
 }: Readonly<PlanetProps>) {
   const pos = Array.isArray(position) ? position : position.toArray();
   const emissive = new THREE.Color(colorB ?? colorA);
+  const [hovered, setHovered] = useState<boolean>(false);
+  useCursor(interactive && hovered);
+
+  const effEmissive =
+    hovered && interactive ? (hoverEmissive ?? emissiveIntensity * 1.6) : emissiveIntensity;
+
   return (
-    <group position={pos as [number, number, number]}>
+    <group
+      position={pos}
+      onPointerOver={
+        interactive
+          ? (e) => {
+              e.stopPropagation();
+              setHovered(true);
+            }
+          : undefined
+      }
+      onPointerOut={
+        interactive
+          ? (e) => {
+              e.stopPropagation();
+              setHovered(false);
+            }
+          : undefined
+      }
+    >
       <mesh castShadow receiveShadow scale={[radius, radius, radius]}>
         <sphereGeometry args={[1, 48, 48]} />
         <meshStandardMaterial
           color={colorA}
           emissive={emissive}
-          emissiveIntensity={emissiveIntensity}
+          emissiveIntensity={effEmissive}
           roughness={0.45}
           metalness={0.06}
+        />
+        <meshPhysicalMaterial
+          roughness={0}
+          color={colorA}
+          emissive={emissive || colorA}
+          envMapIntensity={0.2}
         />
       </mesh>
       {/* halo */}
@@ -61,6 +95,51 @@ function Planet({
 function jitterZ(seed: number) {
   const r = Math.sin(seed * 12.9898) * 43758.5453;
   return ((r % 1) - 0.5) * 0; // widen depth jitter [-0.6..0.6]
+}
+
+function makeOrbitPoints(
+  center: THREE.Vector3,
+  a: number, // semi-major axis
+  e: number, // eccentricity [0..1)
+  theta: number, // in-plane rotation (argument of periapsis)
+  euler: THREE.Euler, // plane tilt (ignored for 'arrow')
+  layout: ClustersLayout,
+  segments = 96
+) {
+  const pts: THREE.Vector3[] = [];
+  const b = a * Math.sqrt(Math.max(0, 1 - e * e));
+  const c = a * e; // focus distance
+  const cosT = Math.cos(theta);
+  const sinT = Math.sin(theta);
+  for (let s = 0; s <= segments; s++) {
+    const t = (s / segments) * Math.PI * 2;
+    // Ellipse around its center at (c, 0) so the focus is at origin
+    const ex = a * Math.cos(t) + c;
+    const ey = b * Math.sin(t);
+    // In-plane rotation by theta
+    const rx = ex * cosT - ey * sinT;
+    const ry = ex * sinT + ey * cosT;
+    const local = new THREE.Vector3(rx, ry, 0);
+    if (layout !== 'arrow') local.applyEuler(euler);
+    const x = center.x + local.x;
+    const y = center.y + local.y;
+    const z = layout === 'arrow' ? center.z : center.z + local.z;
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  return pts;
+}
+
+function OrbitLine({ points, color }: Readonly<{ points: THREE.Vector3[]; color: string }>) {
+  return (
+    <Line
+      points={points}
+      color={color}
+      lineWidth={1}
+      transparent
+      opacity={0.25}
+      depthWrite={false}
+    />
+  );
 }
 
 export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout }>) {
@@ -122,7 +201,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   // Relax main planets (x,y) to avoid overlaps between clusters
   const mainPositions = useMemo(() => {
     const arr = bases.map((v) => v.clone().multiplyScalar(CENTER_SCALE));
-    const MAIN_PAD = 1.0; // extra padding between cluster bounding spheres
+    const MAIN_PAD = 1; // extra padding between cluster bounding spheres
     const MAIN_ITERS = 28;
 
     if (layout !== 'arrow') {
@@ -210,26 +289,43 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         });
 
         const ringR = ringRadii[idx]; // increased orbital radius for satellites
-        const ellipse = 0.7; // slightly rounder ring to spread on Y
+  // Note: ellipse aspect now derived from eccentricity per satellite
         const seed = (idx + 1) * Math.PI * 0.27;
-        for (let i = 0; i < n; i++) {
-          const t = n > 1 ? i / (n - 1) : 0; // 0..1
-          const angle = i * ((Math.PI * 2) / n) + seed;
-          const w = 0.7 - 0.45 * t; // descending visual weight
-          const r = 0.38 + w * 0.42; // satellite radius ~ [0.38..0.8]
-          // Base offset in local ring plane
-          const ox = Math.cos(angle) * (ringR + 0.35 * Math.sin(i * 1.3));
-          const oy = Math.sin(angle) * (ringR * ellipse);
-          const oz = jitterZ(i + idx * 7);
-          // Tilt the orbital plane for 3D feel
-          const tiltX = Math.sin(seed * 1.3) * 0.45; // [-0.45..0.45] rad
-          const tiltZ = Math.cos(seed * 0.9) * 0.35; // [-0.35..0.35] rad
-          const euler = new THREE.Euler(tiltX, 0, tiltZ, 'XYZ');
-          const off = new THREE.Vector3(ox, oy, oz).applyEuler(euler);
+        // Cluster tilt (shared by its satellites)
+        const tiltX = Math.sin(seed * 1.3) * 0.45; // [-0.45..0.45] rad
+        const tiltZ = Math.cos(seed * 0.9) * 0.35; // [-0.35..0.35] rad
+        const euler = new THREE.Euler(tiltX, 0, tiltZ, 'XYZ');
 
-          const px = pos.x + off.x;
-          const py = pos.y + off.y;
-          const pz = layout === 'arrow' ? pos.z /* keep group depth */ : pos.z + off.z;
+        // Precompute orbit lines (one per satellite)
+        const orbitPointsList: THREE.Vector3[][] = [];
+        for (let i = 0; i < n; i++) {
+          const tNorm = n > 1 ? i / (n - 1) : 0; // 0..1
+          const angle = i * ((Math.PI * 2) / n) + seed; // use as phase reference
+          const w = 0.7 - 0.45 * tNorm; // descending visual weight
+          const r = 0.38 + w * 0.42; // satellite visual size ~ [0.38..0.8]
+
+          // Realistic orbital parameters per satellite
+          const a = ringR * (0.85 + 0.25 * tNorm); // semi-major grows with order
+          const eccSeed = Math.sin((i + 1) * 1.318 + idx * 0.7) * 0.5 + 0.5; // [0..1]
+          const e = 0.05 + 0.2 * eccSeed; // eccentricity ~ [0.05..0.25]
+          const theta = (seed * 0.6 + i * 0.9) % (Math.PI * 2); // in-plane rotation
+
+          // Build orbit line
+          orbitPointsList.push(makeOrbitPoints(pos, a, e, theta, euler, layout));
+
+          // Place satellite on its orbit at phase 'angle'
+          const b = a * Math.sqrt(Math.max(0, 1 - e * e));
+          const cF = a * e;
+          const ex = a * Math.cos(angle) + cF;
+          const ey = b * Math.sin(angle);
+          const cosT = Math.cos(theta), sinT = Math.sin(theta);
+          const rx = ex * cosT - ey * sinT;
+          const ry = ex * sinT + ey * cosT;
+          const local = new THREE.Vector3(rx, ry, 0);
+          if (layout !== 'arrow') local.applyEuler(euler);
+          const px = pos.x + local.x;
+          const py = pos.y + local.y;
+          const pz = layout === 'arrow' ? pos.z : pos.z + local.z;
           items.push({
             label: satLabels[i],
             pos: new THREE.Vector3(px, py, pz),
@@ -270,6 +366,10 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
 
         return (
           <group key={c.key}>
+            {/* Orbits (one per satellite) */}
+            {orbitPointsList.map((pts, oi) => (
+              <OrbitLine key={`${c.key}-orbit-${oi}`} points={pts} color={colorA} />
+            ))}
             {/* Main planet */}
             <Planet
               position={pos}
@@ -287,7 +387,9 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                 colorB={s.colorB}
                 label={s.label}
                 radius={s.r}
-                emissiveIntensity={0.6 + (s.r - 0.38) * 0.6}
+                emissiveIntensity={0.25 + (s.r - 0.38) * 0.35} // lower base glow for satellites
+                hoverEmissive={0.9 + (s.r - 0.38) * 0.7} // bright on hover
+                interactive
               />
             ))}
           </group>
