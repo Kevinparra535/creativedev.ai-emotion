@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 import ClustersScene from './ClustersScene';
-import UniverseScene from '@/ui/scene/UniverseScene';
+import UniverseScene from '@/scene/r3f/UniverseScene';
 
 extend({ UnrealBloomPass });
 
@@ -41,8 +41,8 @@ const R3FCanvas = () => {
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
         <directionalLight position={[-2, -3, -5]} intensity={0.8} castShadow />
 
-        {/* <ClustersScene layout='arrow' /> */}
-        <UniverseScene />
+        <ClustersScene layout='arrow' />
+        {/* <UniverseScene /> */}
 
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls />
