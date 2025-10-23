@@ -29,5 +29,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/domain/**", "src/data/**", "src/config/di.ts", "src/utils/emotionInspector.ts"]
+  "exclude": ["src/config/di.ts", "src/utils/emotionInspector.ts"]
 }
