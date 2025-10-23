@@ -1,77 +1,86 @@
-# React + TypeScript + Vite
+# creativedev.ai-emotion
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes y micro-animaciones en DOM, y una galaxia R3F de emociones con enlaces “energéticos”, intro animada, audio interactivo y un planeta con texturas PBR.
 
-Currently, two official plugins are available:
+## Project at a glance
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19 + TypeScript + Vite (SWC). Entrypoint: `src/main.tsx` → `src/App.tsx`.
+- Alias `@` → `src` (ver `vite.config.ts`).
+- Render dual: DOM (Framer Motion + styled-components) y WebGL (R3F/Drei/Postprocessing).
+- Estado: Zustand (`src/stores/*`). Controles: Leva.
+- Scripts: `dev`, `build` (`tsc -b && vite build`), `preview`, `lint`.
 
-## React Compiler
+## Quickstart
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+Requisitos: Node 18+.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+npm i
+npm run dev     # HMR
+npm run build   # TS + Vite build
+npm run preview # servir la build
+npm run lint    # ESLint + reglas tipo-aware
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Variables de entorno (opcional): copia `env_template` a `.env` o `.env.local` y ajusta:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```dotenv
+VITE_EMOTION_MODE=auto       # online | offline | auto
+VITE_OPENAI_API_KEY=         # sólo si usas modo online/auto
+VITE_OPENAI_BASE_URL=https://api.openai.com/v1
+VITE_OPENAI_MODEL=gpt-4o-mini
 ```
+
+Sin clave, el motor usa heurística local. Con clave, puedes forzar `VITE_EMOTION_MODE=online`.
+
+## Características
+
+- Engine de emociones con factory: `online`, `offline` y `auto` (Zod schemas + mapeos robustos).
+- Visual DOM: gradientes y micro-movimiento sincronizados con el preset de la emoción.
+- Galaxia R3F:
+  - Planetas principales (primarias) con satélites en órbitas elípticas.
+  - Enlaces “energéticos” entre primarias (curvas bezier con degradado y “neuron pulses”).
+  - Intro animada por etapas (planetas → satélites → órbitas → enlaces).
+  - Audio: soundtrack ambiental + SFX en hover por planeta. Leva para ajustar volúmenes.
+  - Texturas PBR para un solo planeta configurable (albedo/normal/roughness/AO/metalness/height).
+
+## Configuración clave
+
+Editar `src/config/config.ts`:
+
+- `EMOTION_MODE`: `online | offline | auto`.
+- `AUDIO`: toggles y volúmenes; rutas en `public/audio`.
+- `TEXTURES`: `ENABLED`, `PLANET_KEY`, `PACK`, `ENABLE_DISPLACEMENT`, `DISPLACEMENT_SCALE`.
+
+Texturas de ejemplo: `public/textures/planets/ravine-rock1-bl/*`.
+
+Nota: El AO requiere `uv2`. El proyecto ya duplica `uv → uv2` en la geometría de la esfera.
+
+## Estructura relevante
+
+- `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`.
+- `src/services/openIAService.ts`, `src/services/universeGraph.ts`.
+- `src/hooks/useEmotionEngine.ts`, `src/stores/*`.
+- `src/scene/r3f/R3FCanvas.tsx`, `src/scene/r3f/ClustersScene.tsx`.
+- `src/scene/r3f/objects/Planets.tsx`, `src/scene/r3f/components/*`, `src/scene/r3f/utils/*`.
+- `src/scene/dom/Vizualizer.tsx`, `src/ui/components/*`.
+
+## Cómo usar
+
+1) Ejecuta `npm run dev` y escribe en el input. Verás feedback DOM inmediato y la galaxia R3F.
+2) Activa audio/ajusta volúmenes desde Leva (si está habilitado en `config.ts`).
+3) Para texturas PBR, activa `TEXTURES.ENABLED = true` y define `PLANET_KEY` (ej. `'joy'`).
+
+## Troubleshooting
+
+- “No veo texturas PBR”: verifica `TEXTURES.ENABLED = true` y que el `PLANET_KEY` coincida con una clave de `emotion-clusters`. Revisa que el pack exista en `public/textures/planets/<pack>`.
+- “El AO oscurece todo”: la esfera ya copia `uv`→`uv2`. Asegúrate que el pack tenga `*_ao.png` válido; puedes reducir `aoMapIntensity` si lo deseas.
+- “No suena el audio”: los navegadores bloquean auto-play. Interactúa una vez (click/tecla) para reanudar; el proyecto intenta `resume` automáticamente.
 
 ## Documentación
 
-- Arquitectura: consulte `docs/architecture.md` para una descripción de la estructura, flujo de datos, contratos y cómo extender el sistema.
+- Arquitectura: `docs/architecture.md` (flujos, contratos, módulos y cómo extender).
+
+---
+
+Hecho con React, R3F y cariño.

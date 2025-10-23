@@ -1,29 +1,31 @@
 # Arquitectura de creativedev.ai-emotion (v2)
 
-La app convierte texto en visuales reactivos (DOM y WebGL) en función de emociones detectadas en tiempo real. La nueva capa de servicios permite alternar entre modo offline (heurística local) y online (API) con un solo toggle.
+La app convierte texto en visuales reactivos (DOM y WebGL) en función de emociones detectadas en tiempo real. La capa de servicios permite alternar entre modo offline (heurística local) y online (API) con un solo toggle, y unifica el pipeline para DOM y R3F.
 
 ## Stack principal
 
 - React 19 + TypeScript + Vite (SWC)
-- Render dual: DOM (Framer Motion + styled-components) y WebGL con R3F/Drei
+- Render dual: DOM (Framer Motion + styled-components) y WebGL con R3F/Drei/Postprocessing
 - Estado: Zustand; Controles: Leva
 - Lint/Format: ESLint flat config + Prettier
 
 ## Flujo de extremo a extremo
 
-1) Usuario escribe en el input (`PromptInput` controlado por `Canvas`).
-2) Hay dos caminos en paralelo:
+1. Usuario escribe en el input (`PromptInput` controlado por `Canvas`).
+2. Hay dos caminos en paralelo:
    - UI inmediata: `useEmotionEngine` publica una emoción dominante al store para feedback DOM rápido (gradientes, micro-animaciones).
-   - Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
-3) DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
-4) WebGL: `UniverseScene` renderiza nodos y enlaces instanciados; galaxias según clusters primarios.
+
+- Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
+
+3. DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
+4. WebGL: `UniverseScene` renderiza nodos y enlaces instanciados; galaxias según clusters primarios.
 
 ```mermaid
 flowchart LR
   A[PromptInput] -- text --> B[useEmotionEngine]
   A -- text --> C[emotionService.analyzeToGraph]
   B -- Emotion --> D[Vizualizer (DOM)]
-  C -- {emotions,links,galaxies} --> E[UniverseScene (R3F)]
+  C -- {emotions,links,galaxies} --> E[ClustersScene/UniverseScene (R3F)]
 ```
 
 ## Modo de análisis (factory)
@@ -60,9 +62,14 @@ flowchart LR
 - `src/systems/GraphBuilder.ts` y `src/systems/RuleEngine.ts`
   - Merge de links, clustering auxiliar y reglas (ej. polaridad, transiciones).
 
-- Rendering R3F instanciado
-  - `GalaxyInstanced.tsx`, `LinksInstanced.tsx`, `HaloCloud.tsx` optimizan el render (batch/instancing).
-  - `UniverseCanvas.tsx` incluye luces, OrbitControls y Stats.
+### Rendering R3F (galaxias y primarias)
+
+- `R3FCanvas.tsx`: canvas único con luces, CameraControls, postprocesado (Bloom, Noise, Vignette) y DPR adaptativo.
+- `ClustersScene.tsx`: planetas primarios + satélites; órbitas elípticas; enlaces energéticos con degradado y "neuron pulses"; intro animada por etapas.
+- `UniverseScene.tsx`: alternativa para grafo completo (nodos/enlaces) cuando se visualiza el universo.
+- Utils de escena: `makeOrbitPoints`, `makeArcPoints`, `gradientColors`, `relaxMainPositions`, `computePrimaryEnergyLinks`.
+- Audio: `AudioManager.ts` (ambient + hover SFX), controles vía Leva.
+- Texturas PBR: `objects/Planets.tsx` + `utils/planetTextures.ts` aplican un pack a un planeta configurable con AO/normal/roughness/metalness/opcional displacement.
 
 ## Contratos (dominio)
 
@@ -71,18 +78,19 @@ flowchart LR
 - Galaxy: `{ id, name, members[], centroid?, radius?, colorHex? }`
 
 Payload (multi) compatible con IA/local:
+
 - `MultiEmotionResult`: `{ version: 1, emotions[], global, pairs[] }`
 
 ## Configuración
 
 - `VITE_EMOTION_MODE`: online | offline | auto
 - OpenAI: `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`
-- Ver `env_template` para ejemplo.
+- Ver `env_template` para ejemplo. Para audio y texturas, ajustar `src/config/config.ts` (no variables de entorno).
 
 ## Performance y UX
 
 - DOM: animar transform/opacity y declarar `will-change`.
-- WebGL: instancing para nodos/enlaces; DPR adaptativo en canvas; postprocesado ligero.
+- WebGL: limitación de DPR según dispositivo; postprocesado ligero; geometrías con segmentos razonables; AO requiere `uv2` (duplicado en run-time para esfera PBR).
 - Debounce (350–450ms) y cancelación para interacción fluida.
 
 ## Cómo ejecutar
@@ -98,6 +106,22 @@ npm run preview # sirve la build
 - Agregar emoción/sinónimo: actualizar `config/emotion-clusters` y, si hace falta, `emotion-presets`.
 - Cambiar layout de galaxias: extender `ClusterEngine` o añadir layout en sistemas.
 - Reglas de enlaces: añadir reglas a `RuleEngine`.
+
+### Visuales R3F adicionales
+
+- Enlaces energéticos entre primarias: `computePrimaryEnergyLinks` y render en `ClustersScene` usando `@react-three/drei/Line` con `vertexColors` degradados.
+- Pulsos (neuronas) viajando por bezier: `EnergyPulse` en `ClustersScene` con `useFrame` para animación.
+- Intro escalonada: timeline en `useFrame` que destapa planetas → satélites → órbitas → enlaces.
+
+### Audio
+
+- `AudioManager` centraliza contexto y volúmenes (master/ambient/sfx) y reanuda tras interacción.
+- `config.AUDIO` define toggles y rutas. Hover SFX por clave de emoción.
+
+### Texturas PBR
+
+- `config.TEXTURES` elige `PLANET_KEY` y `PACK`. Se pasa como prop a `Planet` para habilitar PBR.
+- `planetTextures.ts` carga mapas y ajusta color space y sampling. `uv2` se asegura en geometría.
 
 ## Notas
 
