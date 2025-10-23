@@ -4,6 +4,7 @@ import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import UniverseScene from './UniverseScene';
 import { CameraControls, PerspectiveCamera } from '@react-three/drei';
+import { Bloom, DepthOfField, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 
 extend({ UnrealBloomPass });
 
@@ -37,8 +38,19 @@ const R3FCanvas = () => {
         <ambientLight intensity={0.35} />
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
         <UniverseScene />
-        <PerspectiveCamera makeDefault position={[0, 0, 18.5]} />
-        <CameraControls minPolarAngle={0} maxPolarAngle={Math.PI / 1.6} />
+        <PerspectiveCamera
+          makeDefault
+          position={[0.265, 0.672, 17.016]}
+          rotation={[-0.038, 0.064, 0.002]}
+        />
+        <CameraControls />
+
+        <EffectComposer>
+          {/* <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} height={480} /> */}
+          <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
+          <Noise opacity={0.02} />
+          <Vignette eskil={false} offset={0.1} darkness={1.1} />
+        </EffectComposer>
       </Suspense>
     </Canvas>
   );
