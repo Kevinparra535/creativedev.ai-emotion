@@ -2,7 +2,6 @@ import { Canvas, extend } from '@react-three/fiber';
 import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import UniverseScene from './UniverseScene';
 import { CameraControls, PerspectiveCamera, Stars } from '@react-three/drei';
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
 import EmotionCluster from './EmotionCluster';
@@ -38,7 +37,7 @@ const R3FCanvas = () => {
       <Suspense fallback={null}>
         <ambientLight intensity={0.35} />
         <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
-        {/* <UniverseScene /> */}
+  {/* Clusters scene in progress: using EmotionCluster placeholders */}
         <EmotionCluster name='Alegría' color='#FFD54F' position={[2, 1, 0]} />
         <EmotionCluster name='Tristeza' color='#64B5F6' position={[-3, -1, 0]} />
         <EmotionCluster name='Ira' color='#E57373' position={[0, 2, 1]} />

@@ -3,7 +3,6 @@ import {
   localHeuristic,
   promptToService,
   promptToUser,
-  tryParseEmotion,
   tryParseMulti,
   type MultiEmotionResult
 } from '@/utils/iaUtiils';
