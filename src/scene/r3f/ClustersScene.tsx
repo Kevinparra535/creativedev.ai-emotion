@@ -107,7 +107,10 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
       const k = clusterKeyForLabel(e.label);
       if (!k) continue;
       const prev = map.get(k) ?? 0;
-      const w = typeof (e as any).intensity === 'number' ? (e as any).intensity : ((e as any).score ?? 0.5);
+      const w =
+        typeof (e as any).intensity === 'number'
+          ? (e as any).intensity
+          : ((e as any).score ?? 0.5);
       map.set(k, prev + w);
     }
     let max = 0;
@@ -228,6 +231,10 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
       br.next = nowSec + 0.2;
     }
   });
+
+  useEffect(() => {
+    console.log(emotions);
+  }, [emotions]);
 
   // Energy links only between main planets (primary emotions)
   const energyLinks = useMemo<EnergyLinkAgg[]>(

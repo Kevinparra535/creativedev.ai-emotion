@@ -1,22 +1,15 @@
 import { Canvas, extend, useFrame, useThree } from '@react-three/fiber';
-import { Suspense, useMemo, useRef, type ReactElement } from 'react';
+import { Suspense, useMemo, useRef } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
-import {
-  Bloom,
-  EffectComposer,
-  Noise,
-  Vignette,
-  ChromaticAberration
-} from '@react-three/postprocessing';
-import { Vector2 } from 'three';
+// Postprocessing imports removed (PostFX disabled by user)
 
 import ClustersScene from './ClustersScene';
 
 import { useUIStore } from '@/stores/uiStore';
 import { useUniverse } from '@/state/universe.store';
-import { useVisualLeva } from '@/hooks/useVisualLeva';
+// import { useVisualLeva } from '@/hooks/useVisualLeva';
 
 extend({ UnrealBloomPass });
 
@@ -58,7 +51,7 @@ const R3FCanvas = () => {
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls />
 
-        {/* <PostFX /> */}
+        {/* PostFX disabled */}
 
         <Stars radius={200} depth={1} count={5000} factor={2} saturation={0} fade speed={2} />
       </Suspense>
@@ -170,40 +163,4 @@ function BackgroundTone() {
   return null;
 }
 
-function PostFX() {
-  const { post } = useVisualLeva();
-  const children: ReactElement[] = [];
-  if (post.bloomEnabled) {
-    children.push(
-      <Bloom
-        key='bloom'
-        luminanceThreshold={post.bloomThreshold}
-        luminanceSmoothing={post.bloomSmoothing}
-        intensity={post.bloomIntensity}
-        height={300}
-      />
-    );
-  }
-  if (post.noiseEnabled) {
-    children.push(<Noise key='noise' opacity={post.noiseOpacity} />);
-  }
-  if (post.vignetteEnabled) {
-    children.push(
-      <Vignette
-        key='vignette'
-        eskil={false}
-        offset={post.vignetteOffset}
-        darkness={post.vignetteDarkness}
-      />
-    );
-  }
-  if (post.chromaEnabled) {
-    children.push(
-      <ChromaticAberration
-        key='chroma'
-        offset={new Vector2(post.chromaOffset, -post.chromaOffset)}
-      />
-    );
-  }
-  return <EffectComposer>{children}</EffectComposer>;
-}
+// PostFX removed per user revert

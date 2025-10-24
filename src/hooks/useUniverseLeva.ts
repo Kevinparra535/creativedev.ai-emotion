@@ -32,7 +32,7 @@ export function useUniverseLeva() {
   const setData = useUniverse((s) => s.setData);
   const setLayout = useUniverse((s) => s.setLayout);
 
-  useControls('Universe Dev', {
+  const controls = useControls('Universe Dev', {
     'Inject Mock Response': button(() => {
       // 1) Mapeo: convertir payload externo a AIEmotionPayload compatible
       const payload = {
@@ -72,6 +72,48 @@ export function useUniverseLeva() {
     }),
     'Reset Universe': button(() => {
       setData({ emotions: [], galaxies: [], links: [] });
+    }),
+    'New Label': { value: 'admiration' },
+    'Valence [-1..1]': { value: 0.2, min: -1, max: 1, step: 0.01 },
+    'Arousal [0..1]': { value: 0.5, min: 0, max: 1, step: 0.01 },
+    'Intensity [0..1]': { value: 0.6, min: 0, max: 1, step: 0.01 },
+    'Color Hex': { value: '#8ecae6' },
+    'Add New Emotion': button(() => {
+      const label = String((controls as any)['New Label'] || 'emotion').trim();
+      const val = Number((controls as any)['Valence [-1..1]'] ?? 0);
+      const aro = Number((controls as any)['Arousal [0..1]'] ?? 0.5);
+      const inten = Number((controls as any)['Intensity [0..1]'] ?? 0.6);
+      const colorHex = String((controls as any)['Color Hex'] || '#8ecae6');
+
+      // Fetch the latest state at click time to avoid stale closures
+      const st = useUniverse.getState();
+      const currentEmotions = st.emotions;
+      const currentLinks = st.links;
+
+      // Ensure unique id for the new emotion
+      const baseId = `${label.toLowerCase()}-${Date.now()}`;
+      const newEmotion = {
+        id: baseId,
+        label,
+        valence: Math.max(-1, Math.min(1, val)),
+        arousal: Math.max(0, Math.min(1, aro)),
+        intensity: Math.max(0, Math.min(1, inten)),
+        colorHex,
+        meta: { relations: ['awe', 'respect', 'inspiration', 'gratitude', 'pride'] }
+      } as const;
+
+      const nextEmotions = [...currentEmotions, newEmotion as any];
+      const galaxies = GraphBuilder.clusterByValence(nextEmotions);
+
+      // Compute rule links only for the new emotion to avoid duplicating existing weights
+      const newRuleLinks = EnergyRules.flatMap((rule) =>
+        (rule as any).appliesTo(newEmotion, nextEmotions)
+          ? (rule as any).linkify(newEmotion, nextEmotions)
+          : []
+      );
+      const mergedLinks = GraphBuilder.mergeLinks(...currentLinks, ...newRuleLinks);
+
+      st.setData({ emotions: nextEmotions, galaxies, links: mergedLinks });
     })
   });
 }
