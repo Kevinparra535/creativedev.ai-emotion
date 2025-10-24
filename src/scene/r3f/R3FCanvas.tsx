@@ -1,14 +1,17 @@
-import { Canvas, extend } from '@react-three/fiber';
-import { Suspense, useMemo } from 'react';
+import { Canvas, extend, useFrame, useThree } from '@react-three/fiber';
+import { Suspense, useMemo, useRef, type ReactElement } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
-import { Bloom, DepthOfField, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, Noise, Vignette, ChromaticAberration } from '@react-three/postprocessing';
+import { Vector2 } from 'three';
 
 import ClustersScene from './ClustersScene';
+import NebulaBackground from './NebulaBackground';
 
 import { useUIStore } from '@/stores/uiStore';
-import UniverseScene from './UniverseScene';
+import { useUniverse } from '@/state/universe.store';
+import { useVisualLeva } from '@/hooks/useVisualLeva';
 
 extend({ UnrealBloomPass });
 
@@ -42,6 +45,8 @@ const R3FCanvas = () => {
         <Stats />
         {/* Dim global lights when thinking */}
         <SceneLights />
+        <BackgroundTone />
+        <NebulaBackground />
 
         <ClustersScene layout='arrow' />
         {/* <UniverseScene /> */}
@@ -49,14 +54,9 @@ const R3FCanvas = () => {
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls />
 
-        <EffectComposer>
-          {/* <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} height={480} /> */}
-          <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
-          <Noise opacity={0.02} />
-          <Vignette eskil={false} offset={0.1} darkness={1.1} />
-        </EffectComposer>
+        <PostFX />
 
-        <Stars radius={200} depth={1} count={6000} factor={2.5} saturation={0} fade speed={2} />
+        <Stars radius={200} depth={1} count={5000} factor={2.0} saturation={0} fade speed={2} />
       </Suspense>
     </Canvas>
   );
@@ -66,13 +66,140 @@ export default R3FCanvas;
 
 function SceneLights() {
   const thinking = useUIStore((s) => s.thinking);
-  const ambI = thinking ? 0.08 : 0.35;
-  const dirI = thinking ? 0.15 : 0.8;
+  const emotions = useUniverse((s) => s.emotions);
+  // Base intensities with thinking dim
+  const ambBase = thinking ? 0.08 : 0.35;
+  const dirBase = thinking ? 0.15 : 0.8;
+  // Compute global arousal (0..1) to slightly boost light intensity when emotions exist
+  let arousal = 0;
+  if (emotions.length > 0) {
+    let wSum = 0;
+    for (const e of emotions) {
+      const w = e.intensity ?? 0.6;
+      wSum += w;
+      arousal += w * (e.arousal ?? 0.5);
+    }
+    arousal = wSum > 0 ? arousal / wSum : 0;
+  }
+  const boost = emotions.length > 0 ? 1 + arousal * 0.35 : 1;
+  const ambI = ambBase * boost;
+  const dirI = dirBase * boost;
+
+  // Tint lights towards warm/cold based on valence (subtle)
+  let tint = new THREE.Color(0xffffff);
+  if (emotions.length > 0) {
+    let v = 0;
+    let wSum = 0;
+    for (const e of emotions) {
+      const w = e.intensity ?? 0.6;
+      wSum += w;
+      v += w * e.valence;
+    }
+    v = wSum > 0 ? v / wSum : 0;
+    const warm = new THREE.Color('#ffd166');
+    const cold = new THREE.Color('#7e57c2');
+    tint = v >= 0 ? cold.lerp(warm, v) : warm.lerp(cold, -v);
+    // reduce saturation for light tint
+    const hsl = { h: 0, s: 0, l: 0 } as any;
+    tint.getHSL(hsl);
+    tint.setHSL(hsl.h, Math.min(0.3, hsl.s * 0.3), Math.min(0.7, hsl.l));
+  }
   return (
     <>
-      <ambientLight intensity={ambI} />
-      <directionalLight position={[2, 3, 5]} intensity={dirI} castShadow />
-      <directionalLight position={[-2, -3, -5]} intensity={dirI} castShadow />
+      <ambientLight intensity={ambI} color={tint} />
+      <directionalLight position={[2, 3, 5]} intensity={dirI} color={tint} castShadow />
+      <directionalLight position={[-2, -3, -5]} intensity={dirI} color={tint} castShadow />
     </>
   );
+}
+
+function BackgroundTone() {
+  const { gl } = useThree();
+  const emotions = useUniverse((s) => s.emotions);
+  const current = useRef(new THREE.Color(0x000000));
+
+  useFrame((_, delta) => {
+    // No emotions: drift back to black
+    let target = new THREE.Color(0x000000);
+    if (emotions.length > 0) {
+      // Weighted global valence/arousal
+      let v = 0;
+      let a = 0;
+      let wSum = 0;
+      for (const e of emotions) {
+        const w = e.intensity ?? 0.6;
+        wSum += w;
+        v += w * e.valence; // [-1..1]
+        a += w * (e.arousal ?? 0.5); // [0..1]
+      }
+      v = wSum > 0 ? v / wSum : 0;
+      a = wSum > 0 ? a / wSum : 0.5;
+
+      // Map valence to warm/cold base, arousal to saturation/intensity
+      const warmLow = new THREE.Color('#ff8fa3');
+      const warmHigh = new THREE.Color('#ffd166');
+      const coldLow = new THREE.Color('#64b5f6');
+      const coldHigh = new THREE.Color('#7e57c2');
+
+      if (v >= 0) {
+        // Interpolate within warm palette by v [0..1]
+        target = warmLow.clone().lerp(warmHigh, Math.min(1, v));
+      } else {
+        // Interpolate within cold palette by -v [0..1]
+        target = coldLow.clone().lerp(coldHigh, Math.min(1, -v));
+      }
+      // Much more subtle saturation/brightness
+      const hsl = { h: 0, s: 0, l: 0 } as any;
+      target.getHSL(hsl);
+      const sTarget = Math.min(0.35, hsl.s * (0.25 + a * 0.25));
+      const lTarget = Math.min(0.22, 0.10 + a * 0.12);
+      target.setHSL(hsl.h, sTarget, lTarget);
+      // Blend heavily towards black to keep it subtle
+      target = target.lerp(new THREE.Color(0x000000), 0.7);
+    }
+
+    // Smooth transition
+    current.current.lerp(target, Math.min(1, delta * 0.8));
+    gl.setClearColor(current.current, 1);
+  });
+
+  return null;
+}
+
+function PostFX() {
+  const { post } = useVisualLeva();
+  const children: ReactElement[] = [];
+  if (post.bloomEnabled) {
+    children.push(
+      <Bloom
+        key='bloom'
+        luminanceThreshold={post.bloomThreshold}
+        luminanceSmoothing={post.bloomSmoothing}
+        intensity={post.bloomIntensity}
+        height={300}
+      />
+    );
+  }
+  if (post.noiseEnabled) {
+    children.push(<Noise key='noise' opacity={post.noiseOpacity} />);
+  }
+  if (post.vignetteEnabled) {
+    children.push(
+      <Vignette
+        key='vignette'
+        eskil={false}
+        offset={post.vignetteOffset}
+        darkness={post.vignetteDarkness}
+      />
+    );
+  }
+  if (post.chromaEnabled) {
+    children.push(
+      <ChromaticAberration
+        key='chroma'
+        offset={new Vector2(post.chromaOffset, -post.chromaOffset)}
+      />
+    );
+  }
+  return <EffectComposer>{children}</EffectComposer>;
 }

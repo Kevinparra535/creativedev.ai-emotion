@@ -69,6 +69,9 @@ export function useUniverseLeva() {
 
       // 6) Estado global
       setData({ emotions, galaxies, links: mergedLinks });
+    }),
+    'Reset Universe': button(() => {
+      setData({ emotions: [], galaxies: [], links: [] });
     })
   });
 }

@@ -19,6 +19,8 @@ export type PlanetProps = {
   texturePack?: string; // optional PBR texture pack name
   thinking?: boolean; // global thinking/loading dim state
   thinkingBlink?: number; // [0..1] extra boost when blinking during thinking
+  targetColorHex?: string; // target color from universe (lerp towards it)
+  pulseIntensity?: number; // [0..1] scale pulse driver
 };
 
 export function Planet({
@@ -32,7 +34,9 @@ export function Planet({
   hoverEmissive,
   texturePack,
   thinking = false,
-  thinkingBlink = 0
+  thinkingBlink = 0,
+  targetColorHex,
+  pulseIntensity = 0
 }: Readonly<PlanetProps>) {
   const packName =
     texturePack ??
@@ -45,26 +49,47 @@ export function Planet({
   const [hovered, setHovered] = useState<boolean>(false);
   useCursor(interactive && hovered);
   const matRef = useRef<THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial | null>(null);
+  const sphereRef = useRef<THREE.Mesh>(null);
   const haloMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const haloMeshRef = useRef<THREE.Mesh>(null);
   const pulseRef = useRef(0);
+  const tRef = useRef(0);
+  const currentColor = useRef(new THREE.Color(colorB ?? colorA));
 
   // Hover pulse animation to add a subtle bloom pop when sound plays
   useFrame((_, delta) => {
     // Exponential decay of pulse
     pulseRef.current += (0 - pulseRef.current) * Math.min(1, delta * 4);
-    // Base intensity considers global thinking dim
-    const dimBase = Math.max(0.04, Math.min(0.1, emissiveIntensity * 0.12));
+    tRef.current += delta;
+    // Base intensity considers global thinking dim (very low when thinking)
+    const dimBase = 0.008;
     const baseThinking = thinking ? dimBase : emissiveIntensity;
     // Apply hover boost over the chosen base
     const hoverBase =
       hovered && interactive ? (hoverEmissive ?? baseThinking * 1.6) : baseThinking;
     // Add a small blink boost during thinking
-    const blinkBoost = thinking ? (thinkingBlink ?? 0) * 0.22 : 0;
+    const blinkBoost = thinking ? (thinkingBlink ?? 0) * 0.08 : 0;
     const boosted = (hoverBase + blinkBoost) * (1 + 0.6 * pulseRef.current);
     if (matRef.current) matRef.current.emissiveIntensity = boosted;
-    if (haloMatRef.current) haloMatRef.current.opacity = 0.12 * (1 + 1.5 * pulseRef.current);
+    const haloBase = thinking ? 0.02 : 0.12;
+    if (haloMatRef.current) haloMatRef.current.opacity = haloBase * (1 + 1.5 * pulseRef.current);
     if (haloMeshRef.current) haloMeshRef.current.scale.setScalar(1 + 0.08 * pulseRef.current);
+
+    // Lerp material color/emissive towards target
+    if (targetColorHex && matRef.current) {
+      const target = new THREE.Color(targetColorHex);
+      currentColor.current.lerp(target, Math.min(1, delta * 2));
+      (matRef.current as any).color?.copy(currentColor.current);
+      (matRef.current as any).emissive?.copy(currentColor.current);
+    }
+
+    // Scale pulse based on pulseIntensity
+    if (sphereRef.current) {
+      const freq = 4 * Math.max(0.2, pulseIntensity);
+      const amp = 0.08 * Math.min(1, pulseIntensity);
+      const s = 1 + Math.sin(tRef.current * freq * Math.PI) * amp;
+      sphereRef.current.scale.set(radius * s, radius * s, radius * s);
+    }
   });
 
   // Initial emissive intensity (will be overridden each frame above)
@@ -94,7 +119,7 @@ export function Planet({
           : undefined
       }
     >
-      <mesh castShadow receiveShadow scale={[radius, radius, radius]}>
+  <mesh ref={sphereRef} castShadow receiveShadow scale={[radius, radius, radius]}>
         <sphereGeometry
           args={[1, segments, segments]}
           onUpdate={(g) => {

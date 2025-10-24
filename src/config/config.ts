@@ -23,7 +23,7 @@ const config = {
 
   // Audio defaults and asset mapping
   AUDIO: {
-    ENABLED: true,
+    ENABLED: false,
     HOVER_ENABLED: true,
     RESUME_ON_INTERACTION: true, // try to resume audio context on first pointer/keypress
     HOVER_COOLDOWN_MS: 200,

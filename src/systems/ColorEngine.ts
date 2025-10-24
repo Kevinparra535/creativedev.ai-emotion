@@ -13,7 +13,7 @@ export const ColorEngine = {
     if (colors.length > 0) {
       const colorString = colors[0];
       // Convert rgba to rgb to avoid THREE.Color alpha warning
-      const rgbColor = colorString.replace(/rgba?\(([^)]+)\)/, (match, values) => {
+      const rgbColor = colorString.replace(/rgba?\(([^)]+)\)/, (_m, values) => {
         const [r, g, b] = values.split(',').map((v: string) => v.trim());
         return `rgb(${r}, ${g}, ${b})`;
       });

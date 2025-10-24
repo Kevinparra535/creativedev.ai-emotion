@@ -100,17 +100,19 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   // const universeLayout = useUniverse((s) => s.layout);
 
   // Derive per-cluster weights from injected universe emotions (for future use)
-  const clusterWeights = useMemo(() => {
+  const { clusterWeights, maxClusterWeight } = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of clusters) map.set(c.key, 0);
     for (const e of emotions) {
       const k = clusterKeyForLabel(e.label);
       if (!k) continue;
       const prev = map.get(k) ?? 0;
-      const w = typeof e.intensity === 'number' ? e.intensity : ((e.meta as any)?.score ?? 0.5);
+      const w = typeof (e as any).intensity === 'number' ? (e as any).intensity : ((e as any).score ?? 0.5);
       map.set(k, prev + w);
     }
-    return map;
+    let max = 0;
+    for (const v of map.values()) max = Math.max(max, v);
+    return { clusterWeights: map, maxClusterWeight: max || 1 };
   }, [clusters, emotions]);
   // Keep latest derived weights in a ref for future steps (consumes universe data without altering visuals)
   const clusterWeightsRef = useRef<Map<string, number>>(new Map());
@@ -302,6 +304,13 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
       {clusters.map((c, idx) => {
         const colorA = c.colors[0] ?? '#ffffff';
         const colorB = c.colors[1] ?? colorA;
+        // Determine target color for this cluster from strongest matching emotion (fallback to cluster colorA)
+        const topEmotion = emotions
+          .filter((e) => clusterKeyForLabel(e.label) === c.key)
+          .sort((a, b) => (b.intensity ?? 0.5) - (a.intensity ?? 0.5))[0];
+        const targetColorHex = topEmotion?.colorHex ?? colorA;
+        const weight = clusterWeights.get(c.key) ?? 0;
+        const pulseIntensity = Math.min(1, weight / Math.max(0.0001, maxClusterWeight));
         const mainRadius = mainRadii[idx];
 
         const base = mainPositions[idx];
@@ -384,7 +393,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
               <OrbitLine
                 key={`${c.key}-orbit-${oi}`}
                 points={pts}
-                color={colorA}
+                color={targetColorHex}
                 opacityFactor={intro.tOrbit}
               />
             ))}
@@ -402,6 +411,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
               }
               thinking={thinking}
               thinkingBlink={thinkingBlink}
+              targetColorHex={targetColorHex}
+              pulseIntensity={pulseIntensity}
             />
 
             {satellites.map((s, si) => (
@@ -425,7 +436,9 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                   emissiveIntensity: 0.25 + (s.r - 0.38) * 0.35,
                   hoverEmissive: 0.9 + (s.r - 0.38) * 0.7,
                   interactive: true,
-                  thinking
+                  thinking,
+                  targetColorHex,
+                  pulseIntensity: pulseIntensity * 0.6
                 }}
               />
             ))}
