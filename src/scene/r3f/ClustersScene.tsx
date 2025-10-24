@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 import { useMemo, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
@@ -26,7 +27,18 @@ import { useUniverse } from '@/state/universe.store';
 import config from '@/config/config';
 
 export type ClustersLayout = UtilLayout;
-
+export type PairProps = Map<
+  string,
+  {
+    key: string;
+    aIndex: number;
+    bIndex: number;
+    colA: string;
+    colB: string;
+    t0: number;
+    dur: number;
+  }
+>;
 // Pulsing "neuron" traveling along a quadratic bezier from A -> B
 
 export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout }>) {
@@ -48,7 +60,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   // Consume universe data (emotions/links/layout) without altering current visuals
   // Subscribe to store slices separately to avoid creating a new object each render
   const emotions = useUniverse((s) => s.emotions);
-  // const links = useUniverse((s) => s.links);
+  const links = useUniverse((s) => s.links);
   // const universeLayout = useUniverse((s) => s.layout);
 
   // Derive per-cluster weights from injected universe emotions (for future use)
@@ -83,6 +95,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     dur: 0.25,
     next: 0
   });
+  // Ephemeral pair currents
+  const pairCurrentsRef = useRef<PairProps>(new Map());
   // Track first-seen timestamp for satellites to animate their appearance
   const appearRef = useRef<Map<string, number>>(new Map());
 
@@ -191,6 +205,43 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     console.log(emotions);
   }, [emotions]);
 
+  // Spawn ephemeral "electric current" pair arcs whenever links update
+  useEffect(() => {
+    if (!links || links.length === 0) return;
+    // Build a quick index emotionId -> label
+    const emoById = new Map(emotions.map((e) => [e.id, e] as const));
+    // Take top 5 links by weight and create ephemeral entries
+    const top = [...links]
+      .filter((l) => l.source && l.target && l.source !== l.target)
+      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+      .slice(0, 5);
+    const now = timeRef.current;
+    for (const l of top) {
+      const se = emoById.get(l.source);
+      const te = emoById.get(l.target);
+      const sLabel = se?.label ?? String(l.source);
+      const tLabel = te?.label ?? String(l.target);
+      const sKey = clusterKeyForLabel(sLabel);
+      const tKey = clusterKeyForLabel(tLabel);
+      if (!sKey || !tKey || sKey === tKey) continue;
+      const aIndex = clusters.findIndex((c) => c.key === sKey);
+      const bIndex = clusters.findIndex((c) => c.key === tKey);
+      if (aIndex < 0 || bIndex < 0) continue;
+      const colA = clusters[aIndex].colors[0] ?? '#ffffff';
+      const colB = clusters[bIndex].colors[0] ?? '#ffffff';
+      const baseKey = `${sKey}->${tKey}`;
+      const key = `${baseKey}-${Math.round(now * 1000)}-${Math.floor(Math.random() * 9999)}`;
+      // 0.9..1.4s lifespan depending on weight
+      const dur = 0.9 + Math.min(0.5, (l.weight ?? 0.5) * 0.9);
+      pairCurrentsRef.current.set(key, { key, aIndex, bIndex, colA, colB, t0: now, dur });
+      // Cap to avoid unbounded growth
+      if (pairCurrentsRef.current.size > 24) {
+        const firstKey = pairCurrentsRef.current.keys().next().value;
+        if (firstKey) pairCurrentsRef.current.delete(firstKey);
+      }
+    }
+  }, [links, emotions, clusters]);
+
   // Energy links only between main planets (primary emotions)
   const energyLinks = useMemo<EnergyLinkAgg[]>(
     () => computePrimaryEnergyLinks(clusters),
@@ -259,6 +310,70 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                   />
                 </>
               )}
+            </group>
+          );
+        })}
+      </group>
+      {/* Ephemeral pair "electric currents" between clusters based on links */}
+      <group>
+        {[...pairCurrentsRef.current.values()].map((pc) => {
+          const aBase = mainPositions[pc.aIndex];
+          const bBase = mainPositions[pc.bIndex];
+          // Progress and fade-in/out
+          const elapsed = timeRef.current - pc.t0;
+          const t = Math.max(0, Math.min(1, elapsed / pc.dur));
+          if (t >= 1) {
+            queueMicrotask(() => pairCurrentsRef.current.delete(pc.key));
+            return null;
+          }
+          const easeInOut = t < 0.2 ? t / 0.2 : t > 0.8 ? (1 - t) / 0.2 : 1;
+          const zStart = 120;
+          const aPos = new THREE.Vector3(
+            aBase.x,
+            aBase.y,
+            aBase.z + (zStart - aBase.z) * (1 - intro.tPlanet)
+          );
+          const bPos = new THREE.Vector3(
+            bBase.x,
+            bBase.y,
+            bBase.z + (zStart - bBase.z) * (1 - intro.tPlanet)
+          );
+          const { points, ctrl } = makeArcPoints(aPos, bPos, 0.22, 56, layout);
+          const vColors = gradientColors(pc.colA, pc.colB, points.length);
+          const opacity = 0.35 * easeInOut;
+          const width = 0.7;
+          return (
+            <group key={`pc-${pc.key}`}>
+              <Line
+                points={points}
+                vertexColors={vColors}
+                transparent
+                opacity={opacity}
+                depthWrite={false}
+                lineWidth={width}
+                visible={intro.tPlanet > 0.15}
+              />
+              {/* Fast pulses in both directions to suggest current */}
+              <EnergyPulse
+                a={aPos}
+                b={bPos}
+                ctrl={ctrl}
+                colorA={pc.colA}
+                colorB={pc.colB}
+                speed={0.9}
+                size={0.06}
+                phase={(t * 0.37) % 1}
+              />
+              <EnergyPulse
+                a={bPos}
+                b={aPos}
+                ctrl={ctrl}
+                colorA={pc.colB}
+                colorB={pc.colA}
+                speed={0.8}
+                size={0.05}
+                phase={(t * 0.61) % 1}
+              />
             </group>
           );
         })}
