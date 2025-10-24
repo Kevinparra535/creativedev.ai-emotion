@@ -5,15 +5,15 @@
 - React 19 + TypeScript. Entrypoint: `src/main.tsx` → `src/App.tsx`.
 - Vite + SWC (`@vitejs/plugin-react-swc`) en `vite.config.ts` (alias `@` → `src`).
 - Render dual: DOM (Framer Motion + styled-components) y WebGL con R3F/Drei/Postprocessing.
-- Estado: Zustand (`src/stores/*`). UI controls: Leva.
+- Estado: Zustand (UI stores en `src/stores/*`, dominio en `src/state/*`). UI controls: Leva.
 - Scripts: `dev`, `build` (`tsc -b && vite build`), `preview`, `lint`.
 
 ## Arquitectura y flujos
 - Input → engine → visuales:
   - `features/prompt/PromptInput.tsx`: textarea con overlay de “highlights” por palabra clave (usa `getPresetForEmotion`).
   - `hooks/useEmotionEngine.ts`: debounce 350–400ms, cancela peticiones, expone `{ emotion, analyzing, error }`.
-  - `services/openIAService.ts`: `analyzeText(text)` usa heurística local (`utils/iaUtiils.localHeuristic`) por defecto; opcional OpenAI vía `VITE_OPENAI_*`. Multi: `analyzeTextMulti(text)`.
-  - Resultado a stores (`stores/emotionStore.ts`) y a visuales DOM (`scene/dom/Vizualizer.tsx`) y R3F (`scene/r3f/*`).
+  - `services/EmotionServiceFactory.ts` + `services/OpenIAAdapter.ts`: expone `emotionService` para `analyze`, `analyzeMulti` y `analyzeToGraph`. Por defecto usa heurística local (`ai/local-emotions`), y opcional OpenAI vía `VITE_OPENAI_*`.
+  - Resultado a stores (UI: `stores/*`, dominio: `state/universe.store.ts`) y a visuales DOM (`scene/dom/Vizualizer.tsx`) y R3F (`scene/r3f/*`).
 - Presets y clusters:
   - `config/emotion-presets.ts`: `getPresetForEmotion(label)` → `{ colors, motion, particles }`.
   - `config/emotion-clusters.ts`: definición de “galaxias” primarias con posición sugerida/valence/arousal.
@@ -27,8 +27,8 @@
 ## Convenciones del proyecto
 - Importa con alias `@/` (Vite). En el entrypoint se permite extensión `.tsx`; en el resto suele omitirse.
 - Variables de entorno sólo `VITE_*` (ver `src/config/config.ts`). No uses `process.env` directo.
-- Mantén la lógica de IA aislada en `services/openIAService.ts` y helpers en `utils/iaUtiils.ts`.
-- R3F: usa `scene/r3f/R3FCanvas.tsx` como root y añade escenas como hijos (p. ej., `ClustersScene` con `layout='arrow'|'affect'|'centers'`).
+- Mantén la lógica de IA centralizada en `services/EmotionServiceFactory.ts`/`services/OpenIAAdapter.ts` y helpers en `utils/iaUtiils.ts` y `ai/local-emotions.ts`.
+- R3F: usa `scene/r3f/R3FCanvas.tsx` como root y añade escenas como hijos (p. ej., `ClustersScene` con `layout='arrow'|'affect'|'centers'`). Objetos en `scene/r3f/objects/*`.
 
 ## Workflows de dev
 - `npm run dev` HMR.
@@ -45,16 +45,16 @@
 ## Ejemplos en código
 - Engine en UI: `ui/components/Canvas.tsx` usa `useEmotionEngine` y publica en `emotionStore`.
 - Visual DOM: `scene/dom/Vizualizer.tsx` aplica gradiente y micro-movimiento según preset; `features/prompt/PromptInput.tsx` pinta highlights con los mismos colores.
-- Visual R3F: `scene/r3f/ClustersScene.tsx` renderiza planetas/orbitas por cluster y evita colisiones por relajación.
+- Visual R3F: `scene/r3f/ClustersScene.tsx` renderiza planetas/órbitas por cluster y evita colisiones por relajación; enlaces energéticos; controles visuales en `hooks/useVisualLeva.ts`.
 
 ## Performance (práctico)
 - Anima transform/opacity; usa `will-change`. Evita repaints grandes y state por frame.
-- R3F en un solo `Canvas`; postprocesado ligero (Bloom/Noise/Vignette). DPR limitado 1.25–2 según dispositivo.
+- R3F en un solo `Canvas`; postprocesado ligero (Bloom/Noise/Vignette/Chroma). DPR limitado 1.25–2 según dispositivo.
 
 ## Archivos clave
 - `package.json`, `vite.config.ts`, `src/config/config.ts`
-- `src/hooks/useEmotionEngine.ts`, `src/services/openIAService.ts`, `src/utils/iaUtiils.ts`
+- `src/hooks/useEmotionEngine.ts`, `src/services/EmotionServiceFactory.ts`, `src/services/OpenIAAdapter.ts`, `src/utils/iaUtiils.ts`, `src/ai/local-emotions.ts`
 - `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`
-- `scene/dom/Vizualizer.tsx`, `scene/r3f/R3FCanvas.tsx`, `scene/r3f/ClustersScene.tsx`
+- `scene/dom/Vizualizer.tsx`, `scene/r3f/R3FCanvas.tsx`, `scene/r3f/ClustersScene.tsx`, `scene/r3f/objects/*`
 
 ¿Qué sección te gustaría profundizar (flujo del engine, presets, R3F galaxia, o pipeline de universo)? Puedo ampliar con ejemplos o contratos adicionales.

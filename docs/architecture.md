@@ -6,14 +6,15 @@ La app convierte texto en visuales reactivos (DOM y WebGL) en función de emocio
 
 - React 19 + TypeScript + Vite (SWC)
 - Render dual: DOM (Framer Motion + styled-components) y WebGL con R3F/Drei/Postprocessing
-- Estado: Zustand; Controles: Leva
+- Estado: Zustand (UI stores en `src/stores/*`, dominio en `src/state/*`); Controles: Leva
 - Lint/Format: ESLint flat config + Prettier
 
 ## Flujo de extremo a extremo
 
 1. Usuario escribe en el input (`PromptInput` controlado por `Canvas`).
 2. Hay dos caminos en paralelo:
-   - UI inmediata: `useEmotionEngine` publica una emoción dominante al store para feedback DOM rápido (gradientes, micro-animaciones).
+
+- UI inmediata: `useEmotionEngine` publica una emoción dominante al store para feedback DOM rápido (gradientes, micro-animaciones).
 
 - Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
 
@@ -64,8 +65,9 @@ flowchart LR
 
 ### Rendering R3F (galaxias y primarias)
 
-- `R3FCanvas.tsx`: canvas único con luces, CameraControls, postprocesado (Bloom, Noise, Vignette) y DPR adaptativo.
+- `R3FCanvas.tsx`: canvas único con luces, CameraControls, postprocesado (Bloom, Noise, Vignette, Chroma) y DPR adaptativo; controles en `useVisualLeva`.
 - `ClustersScene.tsx`: planetas primarios + satélites; órbitas elípticas; enlaces energéticos con degradado y "neuron pulses"; intro animada por etapas.
+- Objetos: `objects/Planets.tsx`, `objects/Orbits.tsx`; utilidades en `scene/r3f/utils/*`.
 - `UniverseScene.tsx`: alternativa para grafo completo (nodos/enlaces) cuando se visualiza el universo.
 - Utils de escena: `makeOrbitPoints`, `makeArcPoints`, `gradientColors`, `relaxMainPositions`, `computePrimaryEnergyLinks`.
 - Audio: `AudioManager.ts` (ambient + hover SFX), controles vía Leva.
@@ -85,6 +87,7 @@ Payload (multi) compatible con IA/local:
 
 - `VITE_EMOTION_MODE`: online | offline | auto
 - OpenAI: `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`
+- Config de visuales/audio/texturas en `src/config/config.ts` (AUDIO, TEXTURES, tiempos de intro, flags de energía).
 - Ver `env_template` para ejemplo. Para audio y texturas, ajustar `src/config/config.ts` (no variables de entorno).
 
 ## Performance y UX

@@ -7,7 +7,7 @@
 - React 19 + TypeScript + Vite (SWC). Entrypoint: `src/main.tsx` → `src/App.tsx`.
 - Alias `@` → `src` (ver `vite.config.ts`).
 - Render dual: DOM (Framer Motion + styled-components) y WebGL (R3F/Drei/Postprocessing).
-- Estado: Zustand (`src/stores/*`). Controles: Leva.
+- Estado: Zustand (UI stores en `src/stores/*`, store de dominio en `src/state/*`). Controles: Leva.
 - Scripts: `dev`, `build` (`tsc -b && vite build`), `preview`, `lint`.
 
 ## Quickstart
@@ -58,24 +58,29 @@ Nota: El AO requiere `uv2`. El proyecto ya duplica `uv → uv2` en la geometría
 
 ## Estructura relevante
 
-- `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`.
-- `src/services/openIAService.ts`, `src/services/universeGraph.ts`.
-- `src/hooks/useEmotionEngine.ts`, `src/stores/*`.
-- `src/scene/r3f/R3FCanvas.tsx`, `src/scene/r3f/ClustersScene.tsx`.
-- `src/scene/r3f/objects/Planets.tsx`, `src/scene/r3f/components/*`, `src/scene/r3f/utils/*`.
-- `src/scene/dom/Vizualizer.tsx`, `src/ui/components/*`.
+- Config: `src/config/config.ts`, `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`.
+- Servicios IA: `src/services/EmotionServiceFactory.ts`, `src/services/OpenIAAdapter.ts`, `src/services/universeGraph.ts`.
+- Heurística local: `src/ai/local-emotions.ts`.
+- Estado: `src/state/universe.store.ts` (dominio), `src/stores/*` (UI stores).
+- Hooks: `src/hooks/useEmotionEngine.ts`, `src/hooks/useVisualLeva.ts`, `src/hooks/useAudioLeva.ts`.
+- R3F: `src/scene/r3f/R3FCanvas.tsx`, `src/scene/r3f/ClustersScene.tsx`, `src/scene/r3f/UniverseScene.tsx`.
+- R3F objetos/utils: `src/scene/r3f/objects/Planets.tsx`, `src/scene/r3f/objects/Orbits.tsx`, `src/scene/r3f/utils/*`.
+- DOM: `src/scene/dom/Vizualizer.tsx`, `src/ui/components/*`.
 
 ## Cómo usar
 
-1) Ejecuta `npm run dev` y escribe en el input. Verás feedback DOM inmediato y la galaxia R3F.
-2) Activa audio/ajusta volúmenes desde Leva (si está habilitado en `config.ts`).
-3) Para texturas PBR, activa `TEXTURES.ENABLED = true` y define `PLANET_KEY` (ej. `'joy'`).
+1. Ejecuta `npm run dev` y escribe en el input. Verás feedback DOM inmediato y la galaxia R3F.
+2. Activa audio/ajusta volúmenes desde Leva (si está habilitado en `config.ts`).
+3. Para texturas PBR, activa `TEXTURES.ENABLED = true` y define `PLANET_KEY` (ej. `'joy'`).
+
+Controles visuales (Leva): `Visuals / Nebula` y `Visuals / Post` permiten ajustar Nebula (opacidad/escala/velocidad) y PostFX (Bloom/Noise/Vignette/Chroma).
 
 ## Troubleshooting
 
 - “No veo texturas PBR”: verifica `TEXTURES.ENABLED = true` y que el `PLANET_KEY` coincida con una clave de `emotion-clusters`. Revisa que el pack exista en `public/textures/planets/<pack>`.
 - “El AO oscurece todo”: la esfera ya copia `uv`→`uv2`. Asegúrate que el pack tenga `*_ao.png` válido; puedes reducir `aoMapIntensity` si lo deseas.
 - “No suena el audio”: los navegadores bloquean auto-play. Interactúa una vez (click/tecla) para reanudar; el proyecto intenta `resume` automáticamente.
+- “Las líneas se ven diferentes con efectos”: ajusta Bloom en `Visuals / Post` (sube `luminanceThreshold` o baja `intensity`) o desactívalo; también puedes agregar `toneMapped={false}` a líneas si necesitas color estable.
 
 ## Documentación
 
