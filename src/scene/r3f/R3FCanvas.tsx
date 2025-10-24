@@ -21,7 +21,6 @@ import { useVisualLeva } from '@/hooks/useVisualLeva';
 extend({ UnrealBloomPass });
 
 const R3FCanvas = () => {
-  // device-adaptive DPR for perf
   const dpr = useMemo(() => {
     const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const mem = (navigator as any).deviceMemory ?? 8;
@@ -48,12 +47,10 @@ const R3FCanvas = () => {
     >
       <Suspense fallback={null}>
         <Stats />
-        {/* Dim global lights when thinking */}
         <SceneLights />
         <BackgroundTone />
 
         <ClustersScene layout='arrow' />
-        {/* <UniverseScene /> */}
 
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls maxDistance={100} />

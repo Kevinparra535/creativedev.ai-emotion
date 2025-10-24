@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useAudioLeva } from '@/hooks/useAudioLeva';
-import { useUniverseLeva } from '@/hooks/useUniverseLeva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import LoaderIndicator from './LoaderIndicator';
@@ -42,8 +41,6 @@ const MainScreen = () => {
 
   // Wire audio controls (Leva) and auto-resume on interaction
   useAudioLeva();
-  // Dev: Universe mock injector via Leva
-  useUniverseLeva();
 
   useEffect(() => {
     setCurrentEmotion(emotion ?? null);
