@@ -202,3 +202,8 @@ export function computePrimaryEnergyLinks(clusters: ClusterDef[]): EnergyLinkAgg
   }
   return out;
 }
+
+export function jitterZ(seed: number) {
+  const r = Math.sin(seed * 12.9898) * 43758.5453;
+  return ((r % 1) - 0.5) * 0; // widen depth jitter [-0.6..0.6]
+}

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Text, useCursor } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 
@@ -119,7 +119,7 @@ export function Planet({
           : undefined
       }
     >
-  <mesh ref={sphereRef} castShadow receiveShadow scale={[radius, radius, radius]}>
+      <mesh ref={sphereRef} castShadow receiveShadow scale={[radius, radius, radius]}>
         <sphereGeometry
           args={[1, segments, segments]}
           onUpdate={(g) => {
@@ -184,11 +184,6 @@ export function Planet({
   );
 }
 
-export function jitterZ(seed: number) {
-  const r = Math.sin(seed * 12.9898) * 43758.5453;
-  return ((r % 1) - 0.5) * 0; // widen depth jitter [-0.6..0.6]
-}
-
 // Separate component to mount a PBR material with the provided texture pack
 export function PlanetPBRMaterial({
   packName,
@@ -226,5 +221,60 @@ export function PlanetPBRMaterial({
       clearcoat={0.4}
       clearcoatRoughness={0.25}
     />
+  );
+}
+
+export function EnergyPulse({
+  a,
+  b,
+  ctrl,
+  colorA,
+  colorB,
+  speed = 0.35,
+  size = 0.08,
+  phase = 0
+}: Readonly<{
+  a: THREE.Vector3;
+  b: THREE.Vector3;
+  ctrl: THREE.Vector3;
+  colorA: string;
+  colorB: string;
+  speed?: number;
+  size?: number;
+  phase?: number;
+}>) {
+  const ref = useRef<THREE.Mesh>(null);
+  const tRef = useRef(phase % 1);
+  const cA = useMemo(() => new THREE.Color(colorA), [colorA]);
+  const cB = useMemo(() => new THREE.Color(colorB), [colorB]);
+
+  useFrame((_, delta) => {
+    tRef.current += speed * delta;
+    if (tRef.current > 1) tRef.current -= 1;
+    const t = tRef.current;
+    const one = 1 - t;
+    const p = new THREE.Vector3()
+      .copy(a)
+      .multiplyScalar(one * one)
+      .add(new THREE.Vector3().copy(ctrl).multiplyScalar(2 * one * t))
+      .add(new THREE.Vector3().copy(b).multiplyScalar(t * t));
+    if (ref.current) {
+      ref.current.position.copy(p);
+      // Lerp color along the path for cohesive gradient pulse
+      const cc = cA.clone().lerp(cB, t);
+      const mat = ref.current.material as THREE.MeshStandardMaterial;
+      mat.color.copy(cc);
+      mat.emissive.copy(cc);
+      // Soft breathing within the pulse
+      const s = size * (0.9 + 0.2 * Math.sin(t * Math.PI * 2));
+      ref.current.scale.setScalar(s);
+    }
+  });
+
+  return (
+    <mesh ref={ref} castShadow>
+      <sphereGeometry args={[1, 12, 12]} />
+      <meshStandardMaterial emissiveIntensity={1} roughness={0.2} metalness={0.05} />
+    </mesh>
   );
 }

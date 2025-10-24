@@ -2,8 +2,9 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+
 import { getClusters, clusterKeyForLabel } from '@/config/emotion-clusters';
-import config from '@/config/config';
+
 import {
   makeOrbitPoints,
   makeArcPoints,
@@ -11,71 +12,22 @@ import {
   linkWidthForKind,
   relaxMainPositions,
   computePrimaryEnergyLinks,
+  jitterZ,
   type ClustersLayout as UtilLayout,
   type EnergyLinkAgg
 } from '@/utils/sceneUtils';
-import { jitterZ, Planet } from './objects/Planets';
-import { OrbitingSatellite, OrbitLine } from './components/Orbits';
+
+import { Planet, EnergyPulse } from './objects/Planets';
+import { OrbitingSatellite, OrbitLine } from './objects/Orbits';
+
 import { useUIStore } from '@/stores/uiStore';
 import { useUniverse } from '@/state/universe.store';
+
+import config from '@/config/config';
 
 export type ClustersLayout = UtilLayout;
 
 // Pulsing "neuron" traveling along a quadratic bezier from A -> B
-function EnergyPulse({
-  a,
-  b,
-  ctrl,
-  colorA,
-  colorB,
-  speed = 0.35,
-  size = 0.08,
-  phase = 0
-}: Readonly<{
-  a: THREE.Vector3;
-  b: THREE.Vector3;
-  ctrl: THREE.Vector3;
-  colorA: string;
-  colorB: string;
-  speed?: number;
-  size?: number;
-  phase?: number;
-}>) {
-  const ref = useRef<THREE.Mesh>(null);
-  const tRef = useRef(phase % 1);
-  const cA = useMemo(() => new THREE.Color(colorA), [colorA]);
-  const cB = useMemo(() => new THREE.Color(colorB), [colorB]);
-
-  useFrame((_, delta) => {
-    tRef.current += speed * delta;
-    if (tRef.current > 1) tRef.current -= 1;
-    const t = tRef.current;
-    const one = 1 - t;
-    const p = new THREE.Vector3()
-      .copy(a)
-      .multiplyScalar(one * one)
-      .add(new THREE.Vector3().copy(ctrl).multiplyScalar(2 * one * t))
-      .add(new THREE.Vector3().copy(b).multiplyScalar(t * t));
-    if (ref.current) {
-      ref.current.position.copy(p);
-      // Lerp color along the path for cohesive gradient pulse
-      const cc = cA.clone().lerp(cB, t);
-      const mat = ref.current.material as THREE.MeshStandardMaterial;
-      mat.color.copy(cc);
-      mat.emissive.copy(cc);
-      // Soft breathing within the pulse
-      const s = size * (0.9 + 0.2 * Math.sin(t * Math.PI * 2));
-      ref.current.scale.setScalar(s);
-    }
-  });
-
-  return (
-    <mesh ref={ref} castShadow>
-      <sphereGeometry args={[1, 12, 12]} />
-      <meshStandardMaterial emissiveIntensity={1} roughness={0.2} metalness={0.05} />
-    </mesh>
-  );
-}
 
 export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout }>) {
   const {
@@ -131,6 +83,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     dur: 0.25,
     next: 0
   });
+  // Track first-seen timestamp for satellites to animate their appearance
+  const appearRef = useRef<Map<string, number>>(new Map());
 
   // Layout spreads for 'affect' mapping
   const spreadX = 7.5; // slightly larger to reduce collisions on affect layout
@@ -328,10 +282,21 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           base.z + (zStart - base.z) * (1 - intro.tPlanet)
         );
 
-        const satLabels: string[] = (
-          c.synonyms && c.synonyms.length ? c.synonyms : ['s1', 's2', 's3', 's4', 's5', 's6']
-        ).slice(0, 8);
-        const n = satLabels.length;
+        // Satellites driven by universe emotions belonging to this cluster (excluding the primary label)
+        const satEmotions = emotions
+          .filter(
+            (e) =>
+              clusterKeyForLabel(e.label) === c.key &&
+              e.label.toLowerCase() !== c.label.toLowerCase()
+          )
+          .sort((a, b) => (b.intensity ?? 0.5) - (a.intensity ?? 0.5));
+        // Fallback to synonyms to avoid empty clusters when there is no universe data
+        const fallbackLabels: string[] = (
+          c.synonyms && c.synonyms.length ? c.synonyms : ['s1', 's2', 's3', 's4']
+        ).slice(0, 6);
+        const nReal = satEmotions.length;
+        const nFallback = fallbackLabels.length;
+        const renderFallback = nReal === 0;
 
         const ringR = ringRadii[idx];
         const seed = (idx + 1) * Math.PI * 0.27;
@@ -341,6 +306,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
 
         const orbitPointsList: THREE.Vector3[][] = [];
         const satellites: Array<{
+          id: string;
           label: string;
           a: number;
           e: number;
@@ -350,13 +316,38 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           r: number;
           colorA: string;
           colorB: string;
+          pulse: number;
         }> = [];
 
-        for (let i = 0; i < n; i++) {
-          const tNorm = n > 1 ? i / (n - 1) : 0;
-          const angle = i * ((Math.PI * 2) / n) + seed;
+        // Anchor angle towards the strongest neighboring cluster (by derived weight)
+        let anchorAngle = seed;
+        if (nReal > 0 && emotions.length > 0) {
+          let bestIdx = -1;
+          let bestW = -Infinity;
+          for (let j = 0; j < clusters.length; j++) {
+            if (j === idx) continue;
+            const w = clusterWeights.get(clusters[j].key) ?? 0;
+            if (w > bestW) {
+              bestW = w;
+              bestIdx = j;
+            }
+          }
+          if (bestIdx >= 0) {
+            const aBase = mainPositions[idx];
+            const bBase = mainPositions[bestIdx];
+            const dx = bBase.x - aBase.x;
+            const dy = bBase.y - aBase.y;
+            anchorAngle = Math.atan2(dy, dx);
+          }
+        }
+        const spreadStep = 0.32; // radians between neighbors around anchor when using real emotions
+
+        // 1) Real emotion satellites clustered around anchor
+        for (let i = 0; i < nReal; i++) {
+          const tNorm = nReal > 1 ? i / (nReal - 1) : 0;
+          const angle = anchorAngle + (i - (nReal - 1) * 0.5) * spreadStep;
           const w = 0.7 - 0.45 * tNorm;
-          const r = 0.38 + w * 0.42;
+          const baseR = 0.28 + w * 0.22;
 
           const a = ringR * (0.85 + 0.25 * tNorm);
           const eccSeed = Math.sin((i + 1) * 1.318 + idx * 0.7) * 0.5 + 0.5;
@@ -373,17 +364,71 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
 
           orbitPointsList.push(makeOrbitPoints(pos, a, e, theta, eulerSat, layout));
 
+          const em = satEmotions[i];
+          const label = em.label;
+          const eInt = Math.max(0, Math.min(1, em.intensity ?? 0.6));
+          const eColor = em.colorHex ?? colorA;
+          const r = Math.max(0.18, baseR + eInt * 0.22);
+
           satellites.push({
-            label: satLabels[i],
+            id: em.id,
+            label,
             a,
             e,
             theta,
             euler: eulerSat,
             phase0: angle,
             r,
-            colorA,
-            colorB
+            colorA: eColor,
+            colorB: eColor,
+            pulse: eInt
           });
+        }
+
+        // 2) Fallback satellites evenly distributed ONLY if there are no real emotions
+        if (renderFallback) {
+          for (let i = 0; i < nFallback; i++) {
+            const tNorm = nFallback > 1 ? i / (nFallback - 1) : 0;
+            const angle = i * ((Math.PI * 2) / Math.max(1, nFallback)) + seed;
+            const w = 0.7 - 0.45 * tNorm;
+            const baseR = 0.24 + w * 0.18;
+
+            const a = ringR * (0.85 + 0.25 * tNorm);
+            const eccSeed = Math.sin((i + 1) * 1.318 + idx * 0.7) * 0.5 + 0.5;
+            const e = 0.05 + 0.2 * eccSeed;
+            const theta = (seed * 0.6 + i * 0.9) % (Math.PI * 2);
+
+            const maxInc = 0.35;
+            const incX = Math.sin(i * 2.13 + idx * 0.77) * 0.5 * maxInc;
+            const incZ = Math.cos(i * 1.73 + idx * 0.41) * 0.5 * maxInc;
+            const eulerSat =
+              layout === 'arrow'
+                ? baseEuler
+                : new THREE.Euler(baseEuler.x + incX * 0.6, 0, baseEuler.z + incZ * 0.6, 'XYZ');
+
+            orbitPointsList.push(makeOrbitPoints(pos, a, e, theta, eulerSat, layout));
+
+            const label = fallbackLabels[i];
+            const eInt =
+              Math.min(1, (clusterWeights.get(c.key) ?? 0) / Math.max(0.0001, maxClusterWeight)) ||
+              0.25;
+            const eColor = colorA;
+            const r = Math.max(0.16, baseR + eInt * 0.12);
+
+            satellites.push({
+              id: `${c.key}-fb-${i}`,
+              label,
+              a,
+              e,
+              theta,
+              euler: eulerSat,
+              phase0: angle,
+              r,
+              colorA: eColor,
+              colorB: eColor,
+              pulse: eInt * 0.5 // subtler pulse for fallback
+            });
+          }
         }
 
         // Compute blink factor for this planet if active
@@ -422,33 +467,48 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
               pulseIntensity={pulseIntensity}
             />
 
-            {satellites.map((s, si) => (
-              <OrbitingSatellite
-                key={`${c.key}-sat-${si}`}
-                center={pos}
-                a={s.a}
-                e={s.e}
-                theta={s.theta}
-                euler={s.euler}
-                layout={layout}
-                phase0={s.phase0}
-                speed={0.08 + 0.015 * Math.sin((si + 1) * 1.234 + idx * 0.77)}
-                introZOffset={(1 - intro.tSat) * 100}
-                introScale={0.6 + 0.4 * intro.tSat}
-                planet={{
-                  colorA: s.colorA,
-                  colorB: s.colorB,
-                  label: s.label,
-                  radius: s.r,
-                  emissiveIntensity: 0.25 + (s.r - 0.38) * 0.35,
-                  hoverEmissive: 0.9 + (s.r - 0.38) * 0.7,
-                  interactive: true,
-                  thinking,
-                  targetColorHex,
-                  pulseIntensity: pulseIntensity * 0.6
-                }}
-              />
-            ))}
+            {satellites.map((s, si) => {
+              // Per-emotion appearance animation (~0.6s) when first seen
+              let t0 = appearRef.current.get(s.id);
+              if (t0 == null) {
+                t0 = timeRef.current;
+                appearRef.current.set(s.id, t0);
+              }
+              const appear = Math.max(0, Math.min(1, (timeRef.current - t0) / 0.6));
+              // After the global intro completes, avoid pushing new satellites along Z (they looked far/floaty)
+              const postIntro =
+                intro.tPlanet > 0.999 && intro.tSat > 0.999 && intro.tOrbit > 0.999;
+              const introScale = 0.6 + 0.4 * appear;
+              const introZOffset = postIntro ? 0 : (1 - appear) * 24; // was 100, too large
+
+              return (
+                <OrbitingSatellite
+                  key={`${c.key}-sat-${s.id}`}
+                  center={pos}
+                  a={s.a}
+                  e={s.e}
+                  theta={s.theta}
+                  euler={s.euler}
+                  layout={layout}
+                  phase0={s.phase0}
+                  speed={0.08 + 0.015 * Math.sin((si + 1) * 1.234 + idx * 0.77)}
+                  introZOffset={introZOffset}
+                  introScale={introScale}
+                  planet={{
+                    colorA: s.colorA,
+                    colorB: s.colorB,
+                    label: s.label,
+                    radius: s.r,
+                    emissiveIntensity: 0.25 + (s.r - 0.38) * 0.35,
+                    hoverEmissive: 0.9 + (s.r - 0.38) * 0.7,
+                    interactive: true,
+                    thinking,
+                    targetColorHex: s.colorA,
+                    pulseIntensity: s.pulse
+                  }}
+                />
+              );
+            })}
           </group>
         );
       })}
