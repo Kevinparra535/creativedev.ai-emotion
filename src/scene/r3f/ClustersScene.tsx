@@ -170,6 +170,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     // Handle random blink sequence during thinking
     const br = blinkRef.current;
     const nowSec = state.clock.elapsedTime;
+
     if (thinking) {
       // Activate a random planet when time passes next threshold
       if (br.activeIdx == null && nowSec >= br.next) {
@@ -478,8 +479,11 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
               // After the global intro completes, avoid pushing new satellites along Z (they looked far/floaty)
               const postIntro =
                 intro.tPlanet > 0.999 && intro.tSat > 0.999 && intro.tOrbit > 0.999;
-              const introScale = 0.6 + 0.4 * appear;
-              const introZOffset = postIntro ? 0 : (1 - appear) * 24; // was 100, too large
+              // During initial intro, drive satellites by the intro timeline (planet first, then satellites).
+              // After intro, use the per-emotion appear animation only.
+              const satFactor = postIntro ? appear : intro.tSat;
+              const introScale = 0.6 + 0.4 * satFactor;
+              const introZOffset = postIntro ? 0 : (1 - satFactor) * 100;
 
               return (
                 <OrbitingSatellite
