@@ -83,11 +83,11 @@ export function Planet({
       (matRef.current as any).emissive?.copy(currentColor.current);
     }
 
-    // Scale pulse based on pulseIntensity
+    // Scale pulse based on pulseIntensity (intensity-driven frequency and base amplitude)
     if (sphereRef.current) {
-      const freq = 4 * Math.max(0.2, pulseIntensity);
-      const amp = 0.08 * Math.min(1, pulseIntensity);
-      const s = 1 + Math.sin(tRef.current * freq * Math.PI) * amp;
+      const freq = 4 * Math.max(0, pulseIntensity);
+      const amp = 0.1; // base amplitude
+      const s = 1 + Math.sin(tRef.current * freq) * amp;
       sphereRef.current.scale.set(radius * s, radius * s, radius * s);
     }
   });

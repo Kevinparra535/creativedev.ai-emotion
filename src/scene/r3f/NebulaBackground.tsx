@@ -27,8 +27,8 @@ export default function NebulaBackground() {
         uValence: { value: 0 }, // [-1..1]
         uArousal: { value: 0 }, // [0..1]
         uOpacity: { value: 0 }, // fades in only when emotions exist
-  uIntensityGain: { value: 1 },
-  uScale: { value: 1 },
+        uIntensityGain: { value: 1 },
+        uScale: { value: 1 },
         uWarmLow: { value: new THREE.Color('#ff8fa3') },
         uWarmHigh: { value: new THREE.Color('#ffd166') },
         uColdLow: { value: new THREE.Color('#64b5f6') },
@@ -106,10 +106,10 @@ export default function NebulaBackground() {
   useFrame((_, delta) => {
     if (!matRef.current) return;
     const u = matRef.current.uniforms;
-  u.uTime.value += delta;
-  u.uSpeed.value = nebula.speed;
-  u.uScale.value = nebula.scale;
-  u.uIntensityGain.value = nebula.intensityGain;
+    u.uTime.value += delta;
+    u.uSpeed.value = nebula.speed;
+    u.uScale.value = nebula.scale;
+    u.uIntensityGain.value = nebula.intensityGain;
 
     // compute weighted global valence/arousal
     let val = 0;
@@ -130,14 +130,14 @@ export default function NebulaBackground() {
     u.uArousal.value = lerp(u.uArousal.value, aro, Math.min(1, delta * 0.8));
 
     // Fade in only if we have emotions
-  const targetOpacity = emotions.length > 0 && nebula.enabled ? nebula.opacity : 0;
+    const targetOpacity = emotions.length > 0 && nebula.enabled ? nebula.opacity : 0;
     u.uOpacity.value = lerp(u.uOpacity.value, targetOpacity, Math.min(1, delta * 1.2));
   });
 
   return (
     <mesh ref={meshRef} position={[0, 0, -40]} renderOrder={-10}>
       <planeGeometry args={[400, 220, 1, 1]} />
-      <primitive ref={matRef} object={material} attach="material" />
+      <primitive ref={matRef} object={material} attach='material' />
     </mesh>
   );
 }

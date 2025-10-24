@@ -3,11 +3,16 @@ import { Suspense, useMemo, useRef, type ReactElement } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
-import { Bloom, EffectComposer, Noise, Vignette, ChromaticAberration } from '@react-three/postprocessing';
+import {
+  Bloom,
+  EffectComposer,
+  Noise,
+  Vignette,
+  ChromaticAberration
+} from '@react-three/postprocessing';
 import { Vector2 } from 'three';
 
 import ClustersScene from './ClustersScene';
-import NebulaBackground from './NebulaBackground';
 
 import { useUIStore } from '@/stores/uiStore';
 import { useUniverse } from '@/state/universe.store';
@@ -46,7 +51,6 @@ const R3FCanvas = () => {
         {/* Dim global lights when thinking */}
         <SceneLights />
         <BackgroundTone />
-        <NebulaBackground />
 
         <ClustersScene layout='arrow' />
         {/* <UniverseScene /> */}
@@ -54,9 +58,9 @@ const R3FCanvas = () => {
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls />
 
-        <PostFX />
+        {/* <PostFX /> */}
 
-        <Stars radius={200} depth={1} count={5000} factor={2.0} saturation={0} fade speed={2} />
+        <Stars radius={200} depth={1} count={5000} factor={2} saturation={0} fade speed={2} />
       </Suspense>
     </Canvas>
   );
@@ -152,7 +156,7 @@ function BackgroundTone() {
       const hsl = { h: 0, s: 0, l: 0 } as any;
       target.getHSL(hsl);
       const sTarget = Math.min(0.35, hsl.s * (0.25 + a * 0.25));
-      const lTarget = Math.min(0.22, 0.10 + a * 0.12);
+      const lTarget = Math.min(0.22, 0.1 + a * 0.12);
       target.setHSL(hsl.h, sTarget, lTarget);
       // Blend heavily towards black to keep it subtle
       target = target.lerp(new THREE.Color(0x000000), 0.7);
