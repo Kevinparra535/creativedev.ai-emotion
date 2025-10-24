@@ -2,7 +2,7 @@ import { Canvas, extend, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useMemo, useRef, type ReactElement } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
+import { CameraControls, CameraShake, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
 import {
   Bloom,
   EffectComposer,
@@ -56,11 +56,12 @@ const R3FCanvas = () => {
         {/* <UniverseScene /> */}
 
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
-        <CameraControls />
+        <CameraControls maxDistance={100} />
+        <CameraShake intensity={0.2} />
 
         <PostFX />
 
-        <Stars radius={200} depth={1} count={5000} factor={2} saturation={0} fade speed={2} />
+        <Stars radius={100} depth={1} count={5000} factor={2} saturation={0} fade speed={2} />
       </Suspense>
     </Canvas>
   );

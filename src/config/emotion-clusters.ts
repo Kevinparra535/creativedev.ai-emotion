@@ -1,6 +1,8 @@
 // Primary emotion clusters: each is a "galaxy" with a main planet
 // Keep this minimal and composable; rendering layers can import from here.
 
+import type { Emotion } from '@/domain/emotion';
+
 export type ClusterKey =
   | 'love'
   | 'joy'
@@ -33,7 +35,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Love',
     valence: 0.85,
     arousal: 0.6,
-    colors: ['#FF6FAE', '#FF3D67'],
+    colors: ['#F06292', '#F48FB1'],
     radius: 2.8,
     center: [4.8, 1.8, 0.3],
     synonyms: ['affection', 'cariño', 'caring', 'compassion']
@@ -43,7 +45,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Joy',
     valence: 0.9,
     arousal: 0.7,
-    colors: ['#FFD166', '#FF7A59'],
+    colors: ['#FFD54F', '#FFF176'],
     radius: 2.6,
     center: [5.8, 2.6, -0.2],
     synonyms: ['happiness', 'alegría', 'delight', 'pleasure', 'gratitude']
@@ -53,7 +55,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Calm',
     valence: 0.6,
     arousal: 0.2,
-    colors: ['#7AD7F0', '#A7E9AF'],
+    colors: ['#81C784', '#A5D6A7'],
     radius: 2.5,
     center: [2.8, -2.2, 0.2],
     synonyms: ['serenity', 'tranquility', 'trust', 'peace']
@@ -63,7 +65,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Sadness',
     valence: -0.7,
     arousal: 0.3,
-    colors: ['#6B7A8F', '#3A506B'],
+    colors: ['#64B5F6', '#2196F3'],
     radius: 2.7,
     center: [-4.2, -1.6, -0.3],
     synonyms: ['grief', 'melancholy', 'loneliness', 'pena', 'decepción']
@@ -73,7 +75,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Fear',
     valence: -0.85,
     arousal: 0.8,
-    colors: ['#0E3B43', '#1B2A41'],
+    colors: ['#4FC3F7', '#0288D1'],
     radius: 2.9,
     center: [-5.8, 2.8, 0.4],
     synonyms: ['anxiety', 'worry', 'insecurity', 'panic']
@@ -85,7 +87,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     arousal: 0.7,
     colors: ['#D7263D', '#8B0000'],
     radius: 2.9,
-    center: [-5.0, 1.2, -0.2],
+    center: [-5, 1.2, -0.2],
     synonyms: ['frustration', 'rage', 'resentment', 'irritation']
   },
   surprise: {
@@ -93,7 +95,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Surprise',
     valence: 0.2,
     arousal: 0.9,
-    colors: ['#FFE66D', '#9B5DE5'],
+    colors: ['#FFB74D', '#FFA726'],
     radius: 2.4,
     center: [0.8, 3.4, -0.1],
     synonyms: ['astonishment', 'wonder', 'curiosity']
@@ -103,7 +105,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     label: 'Nostalgia',
     valence: 0.2,
     arousal: 0.4,
-    colors: ['#C2A878', '#7E6B5A'],
+    colors: ['#90CAF9', '#B3E5FC'],
     radius: 2.6,
     center: [-1.2, -0.8, 0.25],
     synonyms: ['melancholy', 'memory', 'recuerdo']
@@ -141,4 +143,22 @@ const LABEL_TO_CLUSTER: Record<string, ClusterKey> = (() => {
 export function clusterKeyForLabel(label: string): ClusterKey | null {
   const k = LABEL_TO_CLUSTER[label.trim().toLowerCase()];
   return (k as ClusterKey) ?? null;
+}
+
+// Map a primary cluster to a domain Emotion shape, so rendering/systems can treat primaries uniformly
+export function clusterToEmotion(c: ClusterDef, overrides?: Partial<Emotion>): Emotion {
+  return {
+    id: overrides?.id ?? c.key,
+    label: overrides?.label ?? c.key,
+    valence: overrides?.valence ?? c.valence,
+    arousal: overrides?.arousal ?? c.arousal,
+    intensity: overrides?.intensity ?? 0.7,
+    colorHex: overrides?.colorHex ?? c.colors[0],
+    meta: {
+      ...(overrides?.meta as object),
+      cluster: c.key,
+      radius: c.radius,
+      center: c.center
+    }
+  };
 }

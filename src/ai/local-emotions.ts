@@ -36,6 +36,7 @@ export interface Emotion {
 // -----------------------------
 // Helpers
 // -----------------------------
+import { getCluster, clusterKeyForLabel } from '@/config/emotion-clusters';
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const clampRange = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const hexOk = (h: string) => /^#([0-9A-Fa-f]{6})$/.test(h);
@@ -53,6 +54,13 @@ function sanitizeItem(e: MultiEmotionItem): MultiEmotionItem {
   const colors = e.colors?.filter(hexOk);
   const relations = e.relations?.map(normLabel);
   return { label, weight, valence, arousal, colors, intensity, relations };
+}
+
+function paletteForLabel(label: string): string[] | undefined {
+  const key = clusterKeyForLabel(label);
+  if (!key) return undefined;
+  const c = getCluster(key);
+  return c?.colors;
 }
 
 // -----------------------------
@@ -100,7 +108,9 @@ export function expandFromDominant(d: Emotion): MultiEmotionResult {
 
   // pairs = seed con cada secundario real presente
   const root = finalList[0]?.label ?? 'neutral';
-  const pairs: [string, string][] = finalList.slice(1).map((e) => [root, e.label] as [string, string]);
+  const pairs: [string, string][] = finalList
+    .slice(1)
+    .map((e) => [root, e.label] as [string, string]);
 
   // global = del dominante
   const global = {
@@ -139,7 +149,10 @@ export function localHeuristic(text: string): Emotion {
     };
 
   // === Patrones primarios ===
-  const joy = /(feliz|felicidad|alegr|content|sonrisa|gracias|amor|diver|entusias|esperanz|😊|😀|🥰|😍)/.test(t);
+  const joy =
+    /(feliz|felicidad|alegr|content|sonrisa|gracias|amor|diver|entusias|esperanz|😊|😀|🥰|😍)/.test(
+      t
+    );
   const calm = /(calma|tranquil|relajad|seren|paz|equilibri|control|🧘‍♂️|🌿)/.test(t);
   const sadness = /(triste|deprim|lloro|pena|soledad|fracaso|perd|😢|😭|💔)/.test(t);
   const fear = /(miedo|ansied|nerv|preocup|insegur|temor|😨|😰|😱)/.test(t);
@@ -159,7 +172,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.92,
       valence: 0.8,
       arousal: 0.6,
-      colors: ['#FFD54F', '#FFF176'],
+      colors: paletteForLabel('joy') ?? ['#FFD54F', '#FFF176'],
       intensity: 0.8,
       relations: ['love', 'gratitude', 'surprise']
     };
@@ -170,7 +183,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.87,
       valence: 0.4,
       arousal: 0.2,
-      colors: ['#81C784', '#A5D6A7'],
+      colors: paletteForLabel('calm') ?? ['#81C784', '#A5D6A7'],
       intensity: 0.3,
       relations: ['serenity', 'trust', 'hope']
     };
@@ -181,7 +194,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.88,
       valence: -0.6,
       arousal: 0.3,
-      colors: ['#64B5F6', '#2196F3'],
+      colors: paletteForLabel('sadness') ?? ['#64B5F6', '#2196F3'],
       intensity: 0.5,
       relations: ['nostalgia', 'empathy', 'reflection']
     };
@@ -192,7 +205,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.9,
       valence: -0.7,
       arousal: 0.8,
-      colors: ['#4FC3F7', '#0288D1'],
+      colors: paletteForLabel('fear') ?? ['#4FC3F7', '#0288D1'],
       intensity: 0.9,
       relations: ['anxiety', 'anticipation']
     };
@@ -203,7 +216,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.9,
       valence: -0.8,
       arousal: 0.85,
-      colors: ['#E57373', '#F44336'],
+      colors: paletteForLabel('anger') ?? ['#E57373', '#F44336'],
       intensity: 0.95,
       relations: ['frustration', 'rage', 'defense']
     };
@@ -214,7 +227,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.82,
       valence: -0.2,
       arousal: 0.35,
-      colors: ['#90CAF9', '#B3E5FC'],
+      colors: paletteForLabel('nostalgia') ?? ['#90CAF9', '#B3E5FC'],
       intensity: 0.4,
       relations: ['sadness', 'love', 'memory']
     };
@@ -225,7 +238,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.84,
       valence: 0.3,
       arousal: 0.8,
-      colors: ['#FFB74D', '#FFA726'],
+      colors: paletteForLabel('surprise') ?? ['#FFB74D', '#FFA726'],
       intensity: 0.7,
       relations: ['curiosity', 'joy', 'fear']
     };
@@ -236,7 +249,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.9,
       valence: 0.9,
       arousal: 0.5,
-      colors: ['#F06292', '#F48FB1'],
+      colors: paletteForLabel('love') ?? ['#F06292', '#F48FB1'],
       intensity: 0.8,
       relations: ['joy', 'gratitude', 'trust']
     };
@@ -247,7 +260,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.88,
       valence: 0.8,
       arousal: 0.4,
-      colors: ['#FFD740', '#FFF59D'],
+      colors: paletteForLabel('gratitude') ?? ['#FFD740', '#FFF59D'],
       intensity: 0.6,
       relations: ['love', 'joy']
     };
@@ -258,7 +271,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.83,
       valence: -0.7,
       arousal: 0.6,
-      colors: ['#8D6E63', '#6D4C41'],
+      colors: paletteForLabel('disgust') ?? ['#8D6E63', '#6D4C41'],
       intensity: 0.7,
       relations: ['anger', 'fear']
     };
@@ -269,7 +282,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.86,
       valence: 0.4,
       arousal: 0.5,
-      colors: ['#BA68C8', '#CE93D8'],
+      colors: paletteForLabel('curiosity') ?? ['#BA68C8', '#CE93D8'],
       intensity: 0.5,
       relations: ['surprise', 'joy']
     };
@@ -280,7 +293,7 @@ export function localHeuristic(text: string): Emotion {
       score: 0.88,
       valence: 0.7,
       arousal: 0.6,
-      colors: ['#FFD740', '#FFC107'],
+      colors: paletteForLabel('pride') ?? ['#FFD740', '#FFC107'],
       intensity: 0.7,
       relations: ['joy', 'confidence']
     };

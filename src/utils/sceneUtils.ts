@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { ClusterDef } from '@/config/emotion-clusters';
+import { clusterToEmotion } from '@/config/emotion-clusters';
 import type { Link } from '@/domain/link';
 import type { Emotion } from '@/domain/emotion';
 import { RuleEngine } from '@/systems/RuleEngine';
@@ -167,14 +168,7 @@ export type EnergyLinkAgg = {
 };
 
 export function computePrimaryEnergyLinks(clusters: ClusterDef[]): EnergyLinkAgg[] {
-  const primaries: Emotion[] = clusters.map((c) => ({
-    id: c.key,
-    label: c.key,
-    valence: c.valence,
-    arousal: c.arousal,
-    intensity: 0.7,
-    colorHex: c.colors[0]
-  }));
+  const primaries: Emotion[] = clusters.map((c) => clusterToEmotion(c));
   const links = new RuleEngine({ id: 'energies', rules: EnergyRules }).apply(primaries);
 
   const idxById = new Map<string, number>();
