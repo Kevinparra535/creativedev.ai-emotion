@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { getClusters } from '@/config/emotion-clusters';
+import { getClusters, clusterKeyForLabel } from '@/config/emotion-clusters';
 import config from '@/config/config';
 import {
   makeOrbitPoints,
@@ -17,6 +17,7 @@ import {
 import { jitterZ, Planet } from './objects/Planets';
 import { OrbitingSatellite, OrbitLine } from './components/Orbits';
 import { useUIStore } from '@/stores/uiStore';
+import { useUniverse } from '@/state/universe.store';
 
 export type ClustersLayout = UtilLayout;
 
@@ -87,13 +88,44 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     ENERGY_DUR,
     CENTER_SCALE
   } = config;
+
   const { layout = 'centers' } = props;
   const clusters = useMemo(() => getClusters(), []);
   const thinking = useUIStore((s) => s.thinking);
+
+  // Consume universe data (emotions/links/layout) without altering current visuals
+  // Subscribe to store slices separately to avoid creating a new object each render
+  const emotions = useUniverse((s) => s.emotions);
+  // const links = useUniverse((s) => s.links);
+  // const universeLayout = useUniverse((s) => s.layout);
+
+  // Derive per-cluster weights from injected universe emotions (for future use)
+  const clusterWeights = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of clusters) map.set(c.key, 0);
+    for (const e of emotions) {
+      const k = clusterKeyForLabel(e.label);
+      if (!k) continue;
+      const prev = map.get(k) ?? 0;
+      const w = typeof e.intensity === 'number' ? e.intensity : ((e.meta as any)?.score ?? 0.5);
+      map.set(k, prev + w);
+    }
+    return map;
+  }, [clusters, emotions]);
+  // Keep latest derived weights in a ref for future steps (consumes universe data without altering visuals)
+  const clusterWeightsRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    clusterWeightsRef.current = clusterWeights;
+  }, [clusterWeights]);
+
   const timeRef = useRef(0);
-  const blinkRef = useRef<{ activeIdx: number | null; t0: number; dur: number; next: number }>(
-    { activeIdx: null, t0: 0, dur: 0.25, next: 0 }
-  );
+  const blinkRef = useRef<{ activeIdx: number | null; t0: number; dur: number; next: number }>({
+    activeIdx: null,
+    t0: 0,
+    dur: 0.25,
+    next: 0
+  });
 
   // Layout spreads for 'affect' mapping
   const spreadX = 7.5; // slightly larger to reduce collisions on affect layout
@@ -342,10 +374,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         const br = blinkRef.current;
         let thinkingBlink = 0;
         if (thinking && br.activeIdx === idx) {
-          const s = Math.max(
-            0,
-            Math.min(1, (timeRef.current - br.t0) / Math.max(0.001, br.dur))
-          );
+          const s = Math.max(0, Math.min(1, (timeRef.current - br.t0) / Math.max(0.001, br.dur)));
           thinkingBlink = Math.sin(s * Math.PI); // smooth in/out
         }
 

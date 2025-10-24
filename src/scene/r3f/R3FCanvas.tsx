@@ -8,6 +8,7 @@ import { Bloom, DepthOfField, EffectComposer, Noise, Vignette } from '@react-thr
 import ClustersScene from './ClustersScene';
 
 import { useUIStore } from '@/stores/uiStore';
+import UniverseScene from './UniverseScene';
 
 extend({ UnrealBloomPass });
 
