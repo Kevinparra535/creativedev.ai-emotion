@@ -12,12 +12,12 @@ import { HighlightWrapper, HighlightsLayer, InputFieldRoot } from '@/ui/styles/I
 import { getPresetForEmotion } from '@/config/emotion-presets';
 
 type Props = TextareaHTMLAttributes<HTMLTextAreaElement> & {
-  maxAutoHeight?: number; // px, default 300
+  maxAutoHeight?: number; // px, default 200
   minAutoHeight?: number; // px, default 56
 };
 
 const PromptInput = forwardRef<HTMLTextAreaElement, Props>(
-  ({ maxAutoHeight = 300, minAutoHeight = 56, onChange, value = '', ...rest }, ref) => {
+  ({ maxAutoHeight = 200, minAutoHeight = 56, onChange, value = '', ...rest }, ref) => {
     const innerRef = useRef<HTMLTextAreaElement | null>(null);
     const highlightsRef = useRef<HTMLDivElement | null>(null);
     const { placeholder, ...restProps } = rest;

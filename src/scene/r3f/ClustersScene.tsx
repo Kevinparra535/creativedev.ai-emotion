@@ -16,6 +16,7 @@ import {
 } from '@/utils/sceneUtils';
 import { jitterZ, Planet } from './objects/Planets';
 import { OrbitingSatellite, OrbitLine } from './components/Orbits';
+import { useUIStore } from '@/stores/uiStore';
 
 export type ClustersLayout = UtilLayout;
 
@@ -88,6 +89,11 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   } = config;
   const { layout = 'centers' } = props;
   const clusters = useMemo(() => getClusters(), []);
+  const thinking = useUIStore((s) => s.thinking);
+  const timeRef = useRef(0);
+  const blinkRef = useRef<{ activeIdx: number | null; t0: number; dur: number; next: number }>(
+    { activeIdx: null, t0: 0, dur: 0.25, next: 0 }
+  );
 
   // Layout spreads for 'affect' mapping
   const spreadX = 7.5; // slightly larger to reduce collisions on affect layout
@@ -147,8 +153,10 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
   const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-  useFrame(() => {
-    const now = performance.now();
+  useFrame((state) => {
+    const nowMs = performance.now();
+    const now = nowMs;
+    timeRef.current = state.clock.elapsedTime;
     if (introStartRef.current == null) introStartRef.current = now;
     const elapsed = (now - introStartRef.current) / 1000;
 
@@ -167,6 +175,24 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         return prev;
       return { tPlanet, tSat, tOrbit, tEnergy };
     });
+
+    // Handle random blink sequence during thinking
+    const br = blinkRef.current;
+    const nowSec = state.clock.elapsedTime;
+    if (thinking) {
+      // Activate a random planet when time passes next threshold
+      if (br.activeIdx == null && nowSec >= br.next) {
+        br.activeIdx = Math.floor(Math.random() * clusters.length);
+        br.t0 = nowSec;
+        br.dur = 0.22 + Math.random() * 0.18; // 0.22..0.40s
+        br.next = br.t0 + br.dur + (0.08 + Math.random() * 0.22); // small gap
+      } else if (br.activeIdx != null && nowSec - br.t0 > br.dur) {
+        br.activeIdx = null;
+      }
+    } else {
+      br.activeIdx = null;
+      br.next = nowSec + 0.2;
+    }
   });
 
   // Energy links only between main planets (primary emotions)
@@ -312,6 +338,17 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           });
         }
 
+        // Compute blink factor for this planet if active
+        const br = blinkRef.current;
+        let thinkingBlink = 0;
+        if (thinking && br.activeIdx === idx) {
+          const s = Math.max(
+            0,
+            Math.min(1, (timeRef.current - br.t0) / Math.max(0.001, br.dur))
+          );
+          thinkingBlink = Math.sin(s * Math.PI); // smooth in/out
+        }
+
         return (
           <group key={c.key}>
             {orbitPointsList.map((pts, oi) => (
@@ -334,6 +371,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                   ? config.TEXTURES.PACK
                   : undefined
               }
+              thinking={thinking}
+              thinkingBlink={thinkingBlink}
             />
 
             {satellites.map((s, si) => (
@@ -356,7 +395,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                   radius: s.r,
                   emissiveIntensity: 0.25 + (s.r - 0.38) * 0.35,
                   hoverEmissive: 0.9 + (s.r - 0.38) * 0.7,
-                  interactive: true
+                  interactive: true,
+                  thinking
                 }}
               />
             ))}

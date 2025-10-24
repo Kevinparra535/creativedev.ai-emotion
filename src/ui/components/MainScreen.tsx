@@ -20,23 +20,24 @@ import { useEmotionStore } from '@/stores/emotionStore';
 import { useUniverse } from '@/state/universe.store';
 import { emotionService } from '@/services/EmotionServiceFactory';
 import config from '@/config/config';
+import { useUIStore } from '@/stores/uiStore';
 
 const MainScreen = () => {
   const [text, setText] = useState('');
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
-  const [reading, setReading] = useState(false);
+  // const [reading, setReading] = useState(false);
   const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const controls = useAnimationControls();
   const inputControls = useAnimationControls();
 
-  const { emotion, analyzing } = useEmotionEngine(text, 400);
+  const { emotion, analyzing } = useEmotionEngine(text, 600);
   const setCurrentEmotion = useEmotionStore((s) => s.setCurrent);
   const setUniverseData = useUniverse((s) => s.setData);
+  const thinking = useUIStore((s) => s.thinking);
 
   // Wire audio controls (Leva) and auto-resume on interaction
   useAudioLeva();
@@ -64,12 +65,12 @@ const MainScreen = () => {
     };
   }, [text, setUniverseData]);
 
-  const moveToBottom = useCallback(() => {
+  const expandInput = useCallback(() => {
     if (!inputRef.current) return;
-    void inputControls.start({ y: shiftY }, { duration: 0.3, ease: 'easeInOut' });
+    void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
   }, [inputControls, shiftY]);
 
-  const moveToTop = useCallback(() => {
+  const reduceInput = useCallback(() => {
     if (!inputRef.current) return;
     void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
   }, [inputControls]);
@@ -78,12 +79,6 @@ const MainScreen = () => {
     setText(e.target.value);
   };
 
-  const onType = useCallback(() => {
-    setReading(true);
-    if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
-    typingTimer.current = globalThis.setTimeout(() => setReading(false), 700);
-  }, []);
-
   useEffect(() => {
     const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
     window.addEventListener('resize', onResize);
@@ -91,12 +86,11 @@ const MainScreen = () => {
   }, []);
 
   // Measure input size on mount and on resize
-
   useEffect(() => {
-    if (text.length >= config.INPUT_SHIFT_THRESHOLD) moveToBottom();
-    else moveToTop();
+    if (text.length >= config.INPUT_SHIFT_THRESHOLD) expandInput();
+    else reduceInput();
     // re-run when shiftY changes so position stays consistent across resizes
-  }, [text, shiftY, moveToBottom, moveToTop]);
+  }, [text, shiftY, expandInput, reduceInput]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -114,22 +108,6 @@ const MainScreen = () => {
       window.removeEventListener('resize', measure);
     };
   }, []);
-
-  // Typing indicator debounce: show while user types, hide after idle
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-
-    el.addEventListener('input', onType);
-    el.addEventListener('keydown', onType);
-
-    return () => {
-      el.removeEventListener('input', onType);
-      el.removeEventListener('keydown', onType);
-
-      if (typingTimer.current) globalThis.clearTimeout(typingTimer.current);
-    };
-  }, [onType]);
 
   // Run intro animation once size is known
   useEffect(() => {
@@ -180,20 +158,15 @@ const MainScreen = () => {
     <MainRoot>
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
+
+      <LoaderIndicator reading={thinking || analyzing} />
+
       {/* input on top (fades in after intro) */}
       <motion.div
         initial={{ opacity: 0, y: 0 }}
         animate={inputControls}
-        style={{
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column'
-        }}
+        style={{ position: 'relative' }}
       >
-        <LoaderIndicator reading={reading || analyzing} />
-
         <PromptInput
           ref={inputRef}
           value={text}

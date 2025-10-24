@@ -17,7 +17,7 @@ const LoaderIndicator = ({ reading = true }: Props) => {
           exit={{ opacity: 0, y: 4 }}
           transition={{ duration: 0.2 }}
         >
-          <span>Leyendo tu tono…</span>
+          <span>Feeling</span>
           <Dots aria-hidden='true'>
             {[0, 1, 2].map((i) => (
               <Dot
@@ -39,6 +39,11 @@ const LoaderIndicator = ({ reading = true }: Props) => {
 };
 
 const Indicator = styled(motion.output)`
+  position: absolute;
+  bottom: 30px;
+  left: 20%;
+  transform: translateX(-50%);
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 10px;

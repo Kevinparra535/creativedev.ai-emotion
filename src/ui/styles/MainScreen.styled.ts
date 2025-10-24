@@ -3,17 +3,16 @@ import { spacing } from './scssTokens';
 import { motion } from 'framer-motion';
 
 export const MainRoot = styled.main`
-  padding: ${spacing.space_x3};
   position: absolute;
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
   display: grid;
   place-items: center;
-  width: auto;
+  width: 100%;
   height: auto;
   overflow: hidden;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(10px);
 `;
 
 export const AnimShape = styled(motion.div)`

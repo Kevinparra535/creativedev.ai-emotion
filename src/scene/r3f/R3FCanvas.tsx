@@ -3,8 +3,11 @@ import { Suspense, useMemo } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
 import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
-import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
+import { Bloom, DepthOfField, EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
+
 import ClustersScene from './ClustersScene';
+
+import { useUIStore } from '@/stores/uiStore';
 
 extend({ UnrealBloomPass });
 
@@ -36,9 +39,8 @@ const R3FCanvas = () => {
     >
       <Suspense fallback={null}>
         <Stats />
-        <ambientLight intensity={0.35} />
-        <directionalLight position={[2, 3, 5]} intensity={0.8} castShadow />
-        <directionalLight position={[-2, -3, -5]} intensity={0.8} castShadow />
+        {/* Dim global lights when thinking */}
+        <SceneLights />
 
         <ClustersScene layout='arrow' />
         {/* <UniverseScene /> */}
@@ -60,3 +62,16 @@ const R3FCanvas = () => {
 };
 
 export default R3FCanvas;
+
+function SceneLights() {
+  const thinking = useUIStore((s) => s.thinking);
+  const ambI = thinking ? 0.08 : 0.35;
+  const dirI = thinking ? 0.15 : 0.8;
+  return (
+    <>
+      <ambientLight intensity={ambI} />
+      <directionalLight position={[2, 3, 5]} intensity={dirI} castShadow />
+      <directionalLight position={[-2, -3, -5]} intensity={dirI} castShadow />
+    </>
+  );
+}

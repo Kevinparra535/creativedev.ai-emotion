@@ -17,6 +17,8 @@ export type PlanetProps = {
   interactive?: boolean;
   hoverEmissive?: number; // optional emissive intensity when hovered
   texturePack?: string; // optional PBR texture pack name
+  thinking?: boolean; // global thinking/loading dim state
+  thinkingBlink?: number; // [0..1] extra boost when blinking during thinking
 };
 
 export function Planet({
@@ -28,7 +30,9 @@ export function Planet({
   emissiveIntensity = 0.75,
   interactive = true,
   hoverEmissive,
-  texturePack
+  texturePack,
+  thinking = false,
+  thinkingBlink = 0
 }: Readonly<PlanetProps>) {
   const packName =
     texturePack ??
@@ -49,16 +53,22 @@ export function Planet({
   useFrame((_, delta) => {
     // Exponential decay of pulse
     pulseRef.current += (0 - pulseRef.current) * Math.min(1, delta * 4);
-    const base =
-      hovered && interactive ? (hoverEmissive ?? emissiveIntensity * 1.6) : emissiveIntensity;
-    const boosted = base * (1 + 0.6 * pulseRef.current);
+    // Base intensity considers global thinking dim
+    const dimBase = Math.max(0.04, Math.min(0.1, emissiveIntensity * 0.12));
+    const baseThinking = thinking ? dimBase : emissiveIntensity;
+    // Apply hover boost over the chosen base
+    const hoverBase =
+      hovered && interactive ? (hoverEmissive ?? baseThinking * 1.6) : baseThinking;
+    // Add a small blink boost during thinking
+    const blinkBoost = thinking ? (thinkingBlink ?? 0) * 0.22 : 0;
+    const boosted = (hoverBase + blinkBoost) * (1 + 0.6 * pulseRef.current);
     if (matRef.current) matRef.current.emissiveIntensity = boosted;
     if (haloMatRef.current) haloMatRef.current.opacity = 0.12 * (1 + 1.5 * pulseRef.current);
     if (haloMeshRef.current) haloMeshRef.current.scale.setScalar(1 + 0.08 * pulseRef.current);
   });
 
-  const effEmissive =
-    hovered && interactive ? (hoverEmissive ?? emissiveIntensity * 1.6) : emissiveIntensity;
+  // Initial emissive intensity (will be overridden each frame above)
+  const effEmissive = emissiveIntensity;
 
   return (
     <group

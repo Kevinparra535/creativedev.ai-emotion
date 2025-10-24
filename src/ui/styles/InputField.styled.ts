@@ -57,7 +57,7 @@ export const InputFieldRoot = styled.textarea`
   width: clamp(280px, 50vw, 640px);
   box-sizing: border-box;
   min-height: 56px;
-  max-height: 300px;
+  max-height: 200px;
   border-radius: ${spacing.space_x5};
   border: 1px solid rgba(255, 255, 255, 0.16);
   outline: none;
