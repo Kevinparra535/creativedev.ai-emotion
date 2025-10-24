@@ -6,6 +6,6 @@ type UIState = {
 };
 
 export const useUIStore = create<UIState>((set) => ({
-  thinking: true,
+  thinking: false,
   setThinking: (v) => set({ thinking: v })
 }));
