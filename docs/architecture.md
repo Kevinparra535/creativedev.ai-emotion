@@ -18,8 +18,8 @@ La app convierte texto en visuales reactivos (DOM y WebGL) en función de emocio
 
 - Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
 
-3. DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
-4. WebGL: `UniverseScene` renderiza nodos y enlaces instanciados; galaxias según clusters primarios.
+1. DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
+2. WebGL: `ClustersScene` es la escena principal (planetas/satélites/enlaces); `UniverseScene` queda como alternativa.
 
 ```mermaid
 flowchart LR
@@ -82,6 +82,7 @@ flowchart LR
 Payload (multi) compatible con IA/local:
 
 - `MultiEmotionResult`: `{ version: 1, emotions[], global, pairs[] }`
+- Emoción puede incluir `id` (estable), `relations` (array de labels) y `colors` (paleta). El mapper creará links implícitos desde `relations` cuando existan emociones destino.
 
 ## Configuración
 
@@ -130,3 +131,13 @@ npm run preview # sirve la build
 
 - Preferir `import.meta.env` y claves `VITE_*`.
 - `EmotionServiceFactory` es el único lugar a tocar para cambiar política online/offline.
+
+### Almacenamiento de estado (R3F)
+
+- `useUniverse` (`src/state/universe.store.ts`) mantiene `{ emotions, links, galaxies, layout, positions }`.
+- ClustersScene consume `useUniverse.emotions` (satélites por cluster) y `useUniverse.links` (pair currents). El color del planeta toma `colorHex` de la emoción dominante por cluster.
+
+### Visibilidad de enlaces en ClustersScene
+
+- Enlaces por defecto entre primarias: visibles sólo cuando `!thinking` y `links.length === 0`.
+- Corrientes efímeras (pairs/relations): visibles cuando `links.length > 0`; cada link genera arcos/“pulsos” temporales entre clusters distintos.

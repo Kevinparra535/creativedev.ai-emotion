@@ -13,7 +13,7 @@
   - `features/prompt/PromptInput.tsx`: textarea con overlay de “highlights” por palabra clave (usa `getPresetForEmotion`).
   - `hooks/useEmotionEngine.ts`: debounce 350–400ms, cancela peticiones, expone `{ emotion, analyzing, error }`.
   - `services/EmotionServiceFactory.ts` + `services/OpenIAAdapter.ts`: expone `emotionService` para `analyze`, `analyzeMulti` y `analyzeToGraph`. Por defecto usa heurística local (`ai/local-emotions`), y opcional OpenAI vía `VITE_OPENAI_*`.
-  - Resultado a stores (UI: `stores/*`, dominio: `state/universe.store.ts`) y a visuales DOM (`scene/dom/Vizualizer.tsx`) y R3F (`scene/r3f/*`).
+  - Resultado a stores (UI: `stores/*`, dominio: `state/universe.store.ts`) y a visuales DOM (`scene/dom/Vizualizer.tsx`) y R3F (`scene/r3f/*`). La escena principal de R3F es `scene/r3f/ClustersScene.tsx`.
 - Presets y clusters:
   - `config/emotion-presets.ts`: `getPresetForEmotion(label)` → `{ colors, motion, particles }`.
   - `config/emotion-clusters.ts`: definición de “galaxias” primarias con posición sugerida/valence/arousal.
@@ -43,9 +43,14 @@
 - OpenAI: configura `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`; sin clave, el sistema usa heurística local.
 
 ## Ejemplos en código
-- Engine en UI: `ui/components/Canvas.tsx` usa `useEmotionEngine` y publica en `emotionStore`.
+- Engine en UI: `ui/components/MainScreen.tsx` usa `useEmotionEngine` y publica en `emotionStore`; además dispara `emotionService.analyzeToGraph` para alimentar `useUniverse`.
 - Visual DOM: `scene/dom/Vizualizer.tsx` aplica gradiente y micro-movimiento según preset; `features/prompt/PromptInput.tsx` pinta highlights con los mismos colores.
-- Visual R3F: `scene/r3f/ClustersScene.tsx` renderiza planetas/órbitas por cluster y evita colisiones por relajación; enlaces energéticos; controles visuales en `hooks/useVisualLeva.ts`.
+- Visual R3F: `scene/r3f/ClustersScene.tsx` renderiza planetas/órbitas por cluster y evita colisiones por relajación; enlaces energéticos por defecto y corrientes efímeras basadas en `links` del backend; controles visuales en `hooks/useVisualLeva.ts`.
+
+## Contratos de datos (resumen)
+- Payload IA (multi): `{ version: 1, emotions[], pairs[], global? }`.
+- Emoción: `id?`, `label`, `valence` [-1,1], `arousal` [0,1], `intensity` [0,1], `weight/score` [0,1], `colors?`, `relations?`.
+- Reglas de visibilidad en ClustersScene: enlaces por defecto ocultos en `thinking` o si hay `links`; corrientes visibles cuando `links.length > 0`.
 
 ## Performance (práctico)
 - Anima transform/opacity; usa `will-change`. Evita repaints grandes y state por frame.
