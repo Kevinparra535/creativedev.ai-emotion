@@ -8,9 +8,11 @@ import {
 } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useAudioLeva } from '@/hooks/useAudioLeva';
+import { useEmotionLeva } from '@/hooks/useEmotionLeva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import LoaderIndicator from './LoaderIndicator';
+import Vizualizer from '@/scene/dom/Vizualizer';
 
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
 
@@ -42,6 +44,13 @@ const MainScreen = () => {
 
   // Wire audio controls (Leva) and auto-resume on interaction
   useAudioLeva();
+
+  // Leva: emotion visuals + transparency monitors
+  const { style, intensity, speed, noise: _noise, grain } = useEmotionLeva(
+    emotion ?? null,
+    thinking,
+    analyzing
+  );
 
   useEffect(() => {
     setCurrentEmotion(emotion ?? null);
@@ -163,6 +172,15 @@ const MainScreen = () => {
 
   return (
     <MainRoot>
+      {/* DOM visualizer background driven by current emotion and Leva controls */}
+      <Vizualizer
+        emotion={emotion}
+        analyzing={thinking || analyzing}
+        intensity={intensity}
+        speed={speed}
+        grain={grain}
+        styleName={style}
+      />
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
 

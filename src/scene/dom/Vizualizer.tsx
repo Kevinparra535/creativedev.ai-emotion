@@ -9,13 +9,25 @@ type Props = {
   intensity?: number; // 0..1
   speed?: number; // 0..1
   grain?: number; // 0..1
+  styleName?: string; // Minimal | Dreamy | Cyber | Nature | Memphis | Glitch
 };
 
-const Vizualizer = ({ emotion, analyzing, intensity = 0.5, speed = 0.5, grain = 0.1 }: Props) => {
+const Vizualizer = ({
+  emotion,
+  analyzing,
+  intensity = 0.5,
+  speed = 0.5,
+  grain = 0.1,
+  styleName = 'Minimal'
+}: Props) => {
   const preset = getPresetForEmotion(emotion?.label);
   const bg = `linear-gradient(135deg, ${preset.colors[0]}, ${preset.colors[1]})`;
-  const dur = Math.max(0.5, 1.8 - speed * 1.2);
-  const amp = 1 + intensity * 0.05;
+  // Style multipliers
+  const styleSpeedMul =
+    styleName === 'Dreamy' ? 1.3 : styleName === 'Cyber' ? 0.85 : styleName === 'Glitch' ? 0.6 : styleName === 'Nature' ? 1.1 : 1.0;
+  const styleAmpMul = styleName === 'Glitch' ? 1.2 : styleName === 'Dreamy' ? 1.1 : 1.0;
+  const dur = Math.max(0.5, (1.8 - speed * 1.2) * styleSpeedMul);
+  const amp = (1 + intensity * 0.05) * styleAmpMul;
 
   return (
     <VizualiserRoot
