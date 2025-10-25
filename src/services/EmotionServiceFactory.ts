@@ -45,7 +45,8 @@ const LocalEmotionService: EmotionService = {
         valence: e.valence,
         arousal: e.arousal,
         intensity: e.intensity,
-        colors: e.colors
+        colors: e.colors,
+        relations: e.relations
       })),
       edges: (multi.pairs ?? []).map(([a, b]) => ({
         source: a,

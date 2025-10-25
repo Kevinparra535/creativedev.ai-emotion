@@ -1,4 +1,5 @@
 export interface AIEmotionNode {
+  id?: string;              // opcional: id estable del backend
   label: string;            // "joy"
   score?: number;           // confianza
   valence?: number;         // 0..1 o -1..1 según el proveedor

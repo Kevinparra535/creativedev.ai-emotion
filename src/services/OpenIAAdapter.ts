@@ -6,9 +6,10 @@ import { RuleEngine } from '@/systems/RuleEngine';
 import { mapAIToDomain } from '@/data/mappers';
 import { promptToService, promptToUser, tryParseEmotion, tryParseMulti } from '@/utils/iaUtiils';
 import { PayloadZ } from '@/utils/validators';
+import type { z } from 'zod';
 import { expandFromDominant, localHeuristic } from '@/ai/local-emotions';
 
-function tryParseZodPayload(content: string) {
+function tryParseZodPayload(content: string): z.infer<typeof PayloadZ> | null {
   try {
     const match = /\{[\s\S]*\}/.exec(content);
     const json = match ? match[0] : null;
@@ -69,9 +70,8 @@ function toDomainEmotion(src: LooseEmotion): Emotion {
 export const OpenIAAdapter = {
   async analyze(text: string): Promise<Emotion> {
     // Preserve current behavior: fallback to heuristic when no key
-    if (!config.OPENAI_API_KEY) {
-      return toDomainEmotion(localHeuristic(text));
-    }
+    if (!config.OPENAI_API_KEY) return toDomainEmotion(localHeuristic(text));
+
     try {
       const res = await fetch(`${config.OPENAI_BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -88,7 +88,7 @@ export const OpenIAAdapter = {
       if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
       const data = await res.json();
       const content: string = data.choices?.[0]?.message?.content ?? '';
-      console.log('[OpenIAAdapter] analyze response:', content);
+      console.log('[OpenIAAdapter] analyze response content:', content);
       const parsed = tryParseEmotion(content);
       return toDomainEmotion(parsed ?? localHeuristic(text));
     } catch (err) {
@@ -135,18 +135,19 @@ export const OpenIAAdapter = {
       if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
       const data = await res.json();
       const content: string = data.choices?.[0]?.message?.content ?? '';
-      console.log('[OpenIAAdapter] analyzeMulti response:', content);
       // Strict validation first (Zod)
       const validated = tryParseZodPayload(content);
       if (validated) {
         const payload = {
           nodes: validated.emotions.map((e) => ({
+            id: e.id,
             label: e.label,
             score: e.weight,
             valence: e.valence,
             arousal: e.arousal,
             intensity: e.intensity,
-            colors: e.colors
+            colors: e.colors,
+            relations: e.relations
           })),
           edges: (validated.pairs ?? []).map(([a, b]) => ({
             source: a,
@@ -163,11 +164,13 @@ export const OpenIAAdapter = {
       if (parsed) {
         const payload = {
           nodes: parsed.emotions.map((e) => ({
+            id: e.id,
             label: e.label,
             score: e.weight,
             valence: e.valence,
             arousal: e.arousal,
-            intensity: e.intensity
+            intensity: e.intensity,
+            relations: e.relations
           })),
           edges: (parsed.pairs ?? []).map(([a, b]) => ({
             source: a,

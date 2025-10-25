@@ -3,12 +3,14 @@
 
 // Multi-emotion types (for graph-ready responses)
 export type MultiEmotionItem = {
+  id?: string;
   label: string;
   weight: number; // 0..1
   valence?: number; // -1..1
   arousal?: number; // 0..1
   colors?: string[];
   intensity?: number; // 0..1
+  relations?: string[]; // optional semantic neighbors
 };
 
 export type MultiEmotionResult = {
@@ -149,6 +151,7 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
     const emotionsRaw: any[] = Array.isArray(raw.emotions) ? raw.emotions : [];
     const emotions: MultiEmotionItem[] = emotionsRaw
       .map((e) => ({
+        id: typeof e.id === 'string' ? e.id : undefined,
         label: typeof e.label === 'string' ? e.label.toLowerCase() : undefined,
         weight:
           typeof e.weight === 'number' ? e.weight : typeof e.score === 'number' ? e.score : 0,
@@ -159,7 +162,11 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
           : Array.isArray(e.color)
             ? e.color.filter((c: unknown) => typeof c === 'string')
             : undefined,
-        intensity: typeof e.intensity === 'number' ? e.intensity : undefined
+        intensity: typeof e.intensity === 'number' ? e.intensity : undefined,
+        relations:
+          e && typeof e === 'object'
+            ? extractRelations(e as Record<string, unknown>)
+            : undefined
       }))
       .filter((e) => e.label && e.weight > 0) as MultiEmotionItem[];
 

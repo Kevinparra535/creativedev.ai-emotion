@@ -38,6 +38,7 @@ const MainScreen = () => {
   const setCurrentEmotion = useEmotionStore((s) => s.setCurrent);
   const setUniverseData = useUniverse((s) => s.setData);
   const thinking = useUIStore((s) => s.thinking);
+  const setThinking = useUIStore((s) => s.setThinking);
 
   // Wire audio controls (Leva) and auto-resume on interaction
   useAudioLeva();
@@ -48,22 +49,28 @@ const MainScreen = () => {
 
   // Debounced graph analysis feeding the universe store
   useEffect(() => {
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) {
+      setThinking(false);
+      return;
+    }
     let cancelled = false;
     const timer = globalThis.setTimeout(async () => {
       try {
+        setThinking(true);
         const { emotions, links, galaxies } = await emotionService.analyzeToGraph(text);
         if (!cancelled) setUniverseData({ emotions, links, galaxies });
       } catch (err) {
         // non-fatal: keep previous universe data but surface in devtools
         console.warn('[Canvas] analyzeToGraph failed', err);
+      } finally {
+        if (!cancelled) setThinking(false);
       }
     }, 450);
     return () => {
       cancelled = true;
       globalThis.clearTimeout(timer);
     };
-  }, [text, setUniverseData]);
+  }, [text, setUniverseData, setThinking]);
 
   const expandInput = useCallback(() => {
     if (!inputRef.current) return;

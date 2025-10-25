@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const EmotionZ = z.object({
+  id: z.string().optional(),
   label: z.string().regex(/^[a-z0-9_]+$/),
   weight: z.number().min(0).max(1),
   valence: z.number().min(-1).max(1),

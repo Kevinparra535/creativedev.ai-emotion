@@ -3,8 +3,9 @@ import type { Link, LinkKind } from '@/domain/link';
 import type { AIEmotionPayload } from './schemas';
 
 export function mapAIToDomain(input: AIEmotionPayload): { emotions: Emotion[]; links: Link[] } {
+  console.log('Mapping AI payload to domain model...', input);
   const emotions: Emotion[] = input.nodes.map((n, i) => ({
-    id: `${n.label}-${i}`,
+    id: n.id || `${n.label}-${i}`,
     label: n.label,
     valence: normalizeValence(n.valence), // asegura rango [-1,1]
     arousal: clamp01(n.arousal ?? 0.5),
@@ -24,7 +25,7 @@ export function mapAIToDomain(input: AIEmotionPayload): { emotions: Emotion[]; l
 
   // Links implícitos por "relations" textuales
   const implicit: Link[] = [];
-  emotions.forEach((em) => {
+  for (const em of emotions) {
     const rels = (em.meta?.relations as string[]) || [];
     rels.forEach((r, idx) => {
       const target = emotions.find((x) => x.label.toLowerCase() === r.toLowerCase());
@@ -38,7 +39,7 @@ export function mapAIToDomain(input: AIEmotionPayload): { emotions: Emotion[]; l
         });
       }
     });
-  });
+  }
 
   return { emotions, links: [...explicit, ...implicit] };
 }
@@ -47,10 +48,18 @@ export function mapAIToDomain(input: AIEmotionPayload): { emotions: Emotion[]; l
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 const normalizeValence = (v?: number) => {
-  if (v === undefined) return 0;
-  // Si viniera 0..1, lo mapeamos a -1..1
-  return v > 1 || v < -1 ? Math.max(-1, Math.min(1, v)) : v * 2 - 1;
+  if (v === undefined || Number.isNaN(v)) return 0;
+  // Si ya está en el rango [-1,1], lo dejamos tal cual (evita doble normalización)
+  if (v >= -1 && v <= 1) return v;
+  // En cualquier otro caso, clampeamos a [-1,1]
+  return Math.max(-1, Math.min(1, v));
 };
 
-const resolveId = (nodes: Emotion[], label: string) =>
-  nodes.find((n) => n.label.toLowerCase() === label.toLowerCase())?.id ?? label;
+const resolveId = (nodes: Emotion[], ref: string) => {
+  // 1) exact id match
+  const byId = nodes.find((n) => n.id === ref);
+  if (byId) return byId.id;
+  // 2) label match (case-insensitive)
+  const byLabel = nodes.find((n) => n.label.toLowerCase() === ref.toLowerCase());
+  return byLabel?.id ?? ref;
+};

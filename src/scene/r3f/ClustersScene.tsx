@@ -1,4 +1,3 @@
-/* eslint-disable sonarjs/cognitive-complexity */
 import { useMemo, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
@@ -248,10 +247,13 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     [clusters]
   );
 
+  const showDefaultLinks = !thinking && links.length === 0;
+  const showPairCurrents = links.length > 0;
+
   return (
     <group>
-      {/* Energy links between main planets (only primaries) */}
-      <group>
+      {/* Energy links between main planets (only primaries). Hidden while thinking or when backend pairs are present. */}
+      <group visible={showDefaultLinks}>
         {energyLinks.map((el, i) => {
           const zStart = 140; // behind camera (~100)
           const aBase = mainPositions[el.aIndex];
@@ -314,8 +316,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           );
         })}
       </group>
-      {/* Ephemeral pair "electric currents" between clusters based on links */}
-      <group>
+      {/* Ephemeral pair "electric currents" between clusters based on links from backend */}
+      <group visible={showPairCurrents}>
         {[...pairCurrentsRef.current.values()].map((pc) => {
           const aBase = mainPositions[pc.aIndex];
           const bBase = mainPositions[pc.bIndex];
