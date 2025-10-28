@@ -11,7 +11,7 @@ La app convierte texto en visuales reactivos (DOM y WebGL) en función de emocio
 
 ## Flujo de extremo a extremo
 
-1. Usuario escribe en el input (`PromptInput` controlado por `Canvas`).
+1. Usuario escribe en el input (`features/prompt/PromptInput.tsx`).
 2. Hay dos caminos en paralelo:
 
 - UI inmediata: `useEmotionEngine` publica una emoción dominante al store para feedback DOM rápido (gradientes, micro-animaciones).
@@ -19,7 +19,7 @@ La app convierte texto en visuales reactivos (DOM y WebGL) en función de emocio
 - Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
 
 1. DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
-2. WebGL: `ClustersScene` es la escena principal (planetas/satélites/enlaces); `UniverseScene` queda como alternativa.
+2. WebGL: `ClustersScene` es la escena principal (planetas/satélites/enlaces y Planeta Blend); `UniverseScene` queda como alternativa.
 
 ```mermaid
 flowchart LR
@@ -63,15 +63,26 @@ flowchart LR
 - `src/systems/GraphBuilder.ts` y `src/systems/RuleEngine.ts`
   - Merge de links, clustering auxiliar y reglas (ej. polaridad, transiciones).
 
-### Rendering R3F (galaxias y primarias)
+### Rendering R3F (galaxias, primarias y Planeta Blend)
 
-- `R3FCanvas.tsx`: canvas único con luces, CameraControls, postprocesado (Bloom, Noise, Vignette, Chroma) y DPR adaptativo; controles en `useVisualLeva`.
-- `ClustersScene.tsx`: planetas primarios + satélites; órbitas elípticas; enlaces energéticos con degradado y "neuron pulses"; intro animada por etapas.
+- `R3FCanvas.tsx`: canvas único con luces, CameraControls, postprocesado (Bloom, Noise, Vignette, Chroma) y DPR adaptativo; controles en `useVisualLeva` (sólo PostFX; Nebula fue retirada).
+- `ClustersScene.tsx`: planetas primarios + satélites; órbitas elípticas; enlaces energéticos con degradado y "neuron pulses"; intro animada por etapas; Planeta Blend de primarias en el centroide de clusters activos.
 - Objetos: `objects/Planets.tsx`, `objects/Orbits.tsx`; utilidades en `scene/r3f/utils/*`.
 - `UniverseScene.tsx`: alternativa para grafo completo (nodos/enlaces) cuando se visualiza el universo.
 - Utils de escena: `makeOrbitPoints`, `makeArcPoints`, `gradientColors`, `relaxMainPositions`, `computePrimaryEnergyLinks`.
 - Audio: `AudioManager.ts` (ambient + hover SFX), controles vía Leva.
 - Texturas PBR: `objects/Planets.tsx` + `utils/planetTextures.ts` aplican un pack a un planeta configurable con AO/normal/roughness/metalness/opcional displacement.
+
+#### Planeta Blend + Emotion Visuals 2.0
+
+- `PrimaryBlendPlanet` (en `objects/Planets.tsx`) combina hasta 12 colores de emociones activas.
+- Controles en Leva (hook `useEmotionVisuals2.ts`):
+  - effect: `Watercolor | Oil`
+  - Watercolor: `wcWash`, `wcScale`, `wcSharpness`, `wcFlow`
+  - Oil: `oilSwirl`, `oilScale`, `oilFlow`, `oilShine`, `oilContrast`
+  - Global: `spinSpeed`, `bounce`, `useTextureColor`, `textureColor`
+- Calidad del Planeta Blend (hook `useBlendLeva.ts`): `quality` → `segments`/`sharpness`.
+- Nebula: eliminada. PostFX se controla desde `useVisualLeva`.
 
 ## Contratos (dominio)
 
@@ -141,3 +152,8 @@ npm run preview # sirve la build
 
 - Enlaces por defecto entre primarias: visibles sólo cuando `!thinking` y `links.length === 0`.
 - Corrientes efímeras (pairs/relations): visibles cuando `links.length > 0`; cada link genera arcos/“pulsos” temporales entre clusters distintos.
+
+### Re-balance de enlaces (cliente)
+
+- Cuando el backend no provee links, o provee sólo intra-cluster, el cliente puede sintetizar 1–2 enlaces cruzados entre las emociones más fuertes para mantener legibilidad visual.
+- Implementado en `EmotionServiceFactory.analyzeToGraph` y `OpenIAAdapter.analyzeToGraph` con comprobación de clusters y pesos.

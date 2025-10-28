@@ -1,6 +1,6 @@
 # creativedev.ai-emotion
 
-“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes y micro-animaciones en DOM, y una galaxia R3F de emociones con enlaces “energéticos”, intro animada, audio interactivo y un planeta con texturas PBR.
+“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes y micro-animaciones en DOM, y una galaxia R3F de emociones con enlaces “energéticos”, intro animada, audio interactivo, un planeta con texturas PBR y un Planeta Blend de primarias con efectos en tiempo real (Watercolor y Oil).
 
 ## Project at a glance
 
@@ -9,6 +9,10 @@
 - Render dual: DOM (Framer Motion + styled-components) y WebGL (R3F/Drei/Postprocessing). Escena principal: `ClustersScene`.
 - Estado: Zustand (UI stores en `src/stores/*`, store de dominio en `src/state/*`). Controles: Leva.
 - Scripts: `dev`, `build` (`tsc -b && vite build`), `preview`, `lint`.
+  - Controles destacados:
+    - Emotion Visuals 2.0: selector de efecto para el Planeta Blend (Watercolor | Oil) y parámetros en tiempo real.
+    - Visuals / Blend Planet: calidad (segmentos, nitidez) del Planeta Blend.
+    - Visuals / Post: Bloom, Noise, Vignette y Chromatic Aberration.
 
 ## Quickstart
 
@@ -45,6 +49,7 @@ Sin clave, el motor usa heurística local. Con clave, puedes forzar `VITE_EMOTIO
   - Intro animada por etapas (planetas → satélites → órbitas → enlaces).
   - Audio: soundtrack ambiental + SFX en hover por planeta. Leva para ajustar volúmenes.
   - Texturas PBR para un solo planeta configurable (albedo/normal/roughness/AO/metalness/height).
+  - Planeta Blend de primarias: shader paramétrico que mezcla colores de emociones activas y aplica efectos seleccionables en Leva (Watercolor | Oil).
 
 ## Configuración clave
 
@@ -61,10 +66,12 @@ Nota: El AO requiere `uv2`. El proyecto ya duplica `uv → uv2` en la geometría
 ## Estructura relevante
 
 Config: `src/config/config.ts`, `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`.
+
 - Servicios IA: `src/services/EmotionServiceFactory.ts`, `src/services/OpenIAAdapter.ts`, `src/services/universeGraph.ts`.
 - Heurística local: `src/ai/local-emotions.ts`.
 Estado: `src/state/universe.store.ts` (dominio), `src/stores/*` (UI stores). R3F consume `useUniverse`.
-- Hooks: `src/hooks/useEmotionEngine.ts`, `src/hooks/useVisualLeva.ts`, `src/hooks/useAudioLeva.ts`.
+
+- Hooks: `src/hooks/useEmotionEngine.ts`, `src/hooks/useVisualLeva.ts`, `src/hooks/useAudioLeva.ts`, `src/hooks/useBlendLeva.ts`, `src/hooks/useEmotionVisuals2.ts`.
 - R3F: `src/scene/r3f/R3FCanvas.tsx`, `src/scene/r3f/ClustersScene.tsx`, `src/scene/r3f/UniverseScene.tsx`.
 - R3F objetos/utils: `src/scene/r3f/objects/Planets.tsx`, `src/scene/r3f/objects/Orbits.tsx`, `src/scene/r3f/utils/*`.
 - DOM: `src/scene/dom/Vizualizer.tsx`, `src/ui/components/*`.
@@ -76,7 +83,17 @@ Estado: `src/state/universe.store.ts` (dominio), `src/stores/*` (UI stores). R3F
 3. Para texturas PBR, activa `TEXTURES.ENABLED = true` y define `PLANET_KEY` (ej. `'joy'`).
 4. Para máxima integración de ClustersScene, envía `links` (pairs) y/o `relations` por emoción en el payload (ver contratos).
 
-Controles visuales (Leva): `Visuals / Nebula` y `Visuals / Post` permiten ajustar Nebula (opacidad/escala/velocidad) y PostFX (Bloom/Noise/Vignette/Chroma).
+Controles visuales (Leva):
+
+- Emotion Visuals 2.0
+  - effect: `Watercolor | Oil`
+  - Watercolor: `wcWash`, `wcScale`, `wcSharpness`, `wcFlow`
+  - Oil: `oilSwirl`, `oilScale`, `oilFlow`, `oilShine`, `oilContrast`
+  - Global: `spinSpeed`, `bounce`, `useTextureColor`, `textureColor`
+- Visuals / Blend Planet: `quality` (ajusta `segments` y `sharpness`)
+- Visuals / Post: Bloom, Noise, Vignette, Chromatic Aberration
+
+Nota: la Nebula fue retirada; el canvas usa sólo PostFX.
 
 ## Troubleshooting
 
@@ -84,11 +101,13 @@ Controles visuales (Leva): `Visuals / Nebula` y `Visuals / Post` permiten ajusta
 - “El AO oscurece todo”: la esfera ya copia `uv`→`uv2`. Asegúrate que el pack tenga `*_ao.png` válido; puedes reducir `aoMapIntensity` si lo deseas.
 - “No suena el audio”: los navegadores bloquean auto-play. Interactúa una vez (click/tecla) para reanudar; el proyecto intenta `resume` automáticamente.
 - “Las líneas se ven diferentes con efectos”: ajusta Bloom en `Visuals / Post` (sube `luminanceThreshold` o baja `intensity`) o desactívalo; también puedes agregar `toneMapped={false}` a líneas si necesitas color estable.
+- “El Planeta Blend se ve desaturado”: baja `wcWash` (Watercolor) o usa `useTextureColor` con un color de referencia; en Oil, sube `oilContrast` y `oilShine`.
 
 ## Documentación
 
 - Arquitectura: `docs/architecture.md` (flujos, contratos, módulos y cómo extender).
 - Contratos de datos: `docs/data-contracts.md` (payload IA, mapeo a dominio, ejemplos con `id` y `relations`).
+- Instrucciones de desarrollo: `.github/copilot-instructions.md` (resumen técnico, flujos de trabajo y gotchas).
 
 ---
 

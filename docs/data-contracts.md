@@ -96,6 +96,7 @@ const EmotionZ = z.object({
 - Enlaces:
   - Por defecto entre primarias (energía): visibles solo cuando `!thinking` y no hay `links` del backend.
   - Corrientes efímeras por `links` (pairs/relations): visibles cuando `links.length > 0`.
+  - Re-balance (cliente): si hay `links` pero ninguno cruza clusters, el cliente sintetiza 1–2 enlaces cruzados entre emociones con mayor `intensity`/`score` para mantener continuidad visual.
 
 ## Recomendaciones de backend
 
@@ -103,3 +104,4 @@ const EmotionZ = z.object({
 - Mantener `label` consistente con `config/emotion-clusters`.
 - Proveer `relations` siempre que tenga sentido; cuando no haya `pairs`, aún obtendrás conexiones implícitas.
 - `valence` y `arousal` ya normalizados en su rango; el cliente no re-escala si están dentro del rango.
+- Si tu modelo no devuelve `pairs`, considera incluir `relations` por emoción; de lo contrario, el cliente aplicará re-balance opcional para generar enlaces cruzados mínimos.

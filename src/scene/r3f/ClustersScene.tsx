@@ -254,7 +254,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   // Blend quality controls
   const { segments: blendSegments, sharpness: blendSharpness } = useBlendLeva();
   // Emotion Visuals 2.0 controls
-  const ev2 = useEmotionVisuals2();
+  const { planetConfig: ev2 } = useEmotionVisuals2();
 
   // Compute dynamic blended planet from current emotions
   const blend = useMemo(() => {
@@ -308,10 +308,16 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           segments={blendSegments}
           sharpness={blendSharpness}
           spinSpeed={ev2.spinSpeed}
+          effect={ev2.effect}
           wcWash={ev2.wcWash}
           wcScale={ev2.wcScale}
           wcFlow={ev2.wcFlow}
           wcSharpness={ev2.wcSharpness}
+          oilSwirl={ev2.oilSwirl}
+          oilScale={ev2.oilScale}
+          oilFlow={ev2.oilFlow}
+          oilShine={ev2.oilShine}
+          oilContrast={ev2.oilContrast}
         />
       )}
       {/* Energy links between main planets (only primaries). Hidden while thinking or when backend pairs are present. */}

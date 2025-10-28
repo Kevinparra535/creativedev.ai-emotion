@@ -298,11 +298,17 @@ export function PrimaryBlendPlanet({
   segments = 128,
   sharpness = 2.2,
   spinSpeed = 1,
+  effect = 'Watercolor',
   targetMix = 0.25,
   wcWash = 0.06,
   wcScale = 1,
   wcFlow = 1,
-  wcSharpness = 2.2
+  wcSharpness = 2.2,
+  oilSwirl = 0.9,
+  oilScale = 1.4,
+  oilFlow = 0.9,
+  oilShine = 0.35,
+  oilContrast = 2.2
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -320,11 +326,17 @@ export function PrimaryBlendPlanet({
   segments?: number;
   sharpness?: number;
   spinSpeed?: number;
+  effect?: 'Watercolor' | 'Oil';
   targetMix?: number;
   wcWash?: number;
   wcScale?: number;
   wcFlow?: number;
   wcSharpness?: number;
+  oilSwirl?: number;
+  oilScale?: number;
+  oilFlow?: number;
+  oilShine?: number;
+  oilContrast?: number;
 }>) {
   const pos = Array.isArray(position) ? position : position.toArray();
   const n = Math.max(0, Math.min(12, colors.length));
@@ -354,14 +366,35 @@ export function PrimaryBlendPlanet({
       uLightDir: { value: new THREE.Vector3(0.4, 0.7, 0.5).normalize() },
       uAlpha: { value: 1 },
       // extra effects
+      uEffect: { value: effect === 'Oil' ? 1 : 0 },
       uBrightness: { value: emissiveIntensity },
       uTargetColor: { value: new THREE.Vector3(1, 1, 1) },
       uTargetMix: { value: 0 },
       uSharpness: { value: sharpness },
       uWash: { value: wcWash },
-      uFlow: { value: wcFlow }
+      uFlow: { value: wcFlow },
+      // Oil uniforms
+      uOilSwirl: { value: oilSwirl },
+      uOilScale: { value: oilScale },
+      uOilFlow: { value: oilFlow },
+      uOilShine: { value: oilShine },
+      uOilContrast: { value: oilContrast }
     } as Record<string, any>;
-  }, [palette, n, emissiveIntensity, sharpness, wcWash, wcScale, wcFlow]);
+  }, [
+    palette,
+    n,
+    emissiveIntensity,
+    sharpness,
+    wcWash,
+    wcScale,
+    wcFlow,
+    effect,
+    oilSwirl,
+    oilScale,
+    oilFlow,
+    oilShine,
+    oilContrast
+  ]);
 
   // Update colors if palette changes
   useMemo(() => {
@@ -383,9 +416,16 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uScale.value = wcScale;
       matRef.current.uniforms.uWash.value = wcWash;
       matRef.current.uniforms.uFlow.value = wcFlow;
+      matRef.current.uniforms.uEffect.value = effect === 'Oil' ? 1 : 0;
       // Allow EV2 to override watercolor sharpness in real-time
       matRef.current.uniforms.uSharpness.value =
         wcSharpness ?? matRef.current.uniforms.uSharpness.value;
+      // Update Oil uniforms
+      matRef.current.uniforms.uOilSwirl.value = oilSwirl;
+      matRef.current.uniforms.uOilScale.value = oilScale;
+      matRef.current.uniforms.uOilFlow.value = oilFlow;
+      matRef.current.uniforms.uOilShine.value = oilShine;
+      matRef.current.uniforms.uOilContrast.value = oilContrast;
     }
     // Scale breathing + hover pulse
     if (meshRef.current) {
@@ -452,12 +492,19 @@ export function PrimaryBlendPlanet({
     uniform vec3 uLightDir;
     uniform float uAlpha;
     uniform float uColors[36]; // 12 * 3 rgb
+    uniform int uEffect; // 0 watercolor, 1 oil
     uniform float uBrightness;
     uniform vec3 uTargetColor;
     uniform float uTargetMix;
     uniform float uSharpness;
     uniform float uWash;
     uniform float uFlow;
+    // Oil
+    uniform float uOilSwirl;
+    uniform float uOilScale;
+    uniform float uOilFlow;
+    uniform float uOilShine;
+    uniform float uOilContrast;
 
     // Hash/Noise helpers
     float hash(vec2 p){
@@ -485,27 +532,60 @@ export function PrimaryBlendPlanet({
       int idx = i*3;
       return vec3(uColors[idx], uColors[idx+1], uColors[idx+2]);
     }
+    vec2 swirl(vec2 uv, float amount, float t){
+      vec2 c = uv - 0.5;
+      float r = length(c);
+      float a = atan(c.y, c.x);
+      float ang = amount * (0.6 + 0.4*sin(6.2831*(r*1.2 + t)));
+      a += ang;
+      vec2 s = vec2(cos(a), sin(a)) * r;
+      return s + 0.5;
+    }
     void main(){
-      // watercolor-ish banded blend
-      vec2 p = vUv * uScale;
-  float t = uTime * 0.15 * max(0.001, uFlow) + uSeed;
-      float f = fbm(p + vec2(t, -t));
-      // weights per color using phase-shifted fbm + softmax-like
-      vec3 acc = vec3(0.0);
-      float wsum = 0.0;
-      for(int i=0;i<12;i++){
-        if(i>=uCount) break;
-        float phase = float(i)*1.618 + t*0.9;
-        float n = fbm(p*1.3 + vec2(cos(phase), sin(phase))*0.6);
-        float w = smoothstep(0.35, 0.95, 0.5 + 0.5*sin(6.2831*n + phase));
-        // emphasize a few colors per fragment (controlled)
-        w = pow(w, max(1.0, uSharpness));
-        acc += getColor(i) * w;
-        wsum += w;
+      vec3 col;
+      if(uEffect == 0){
+        // Watercolor
+        vec2 p = vUv * uScale;
+        float t = uTime * 0.15 * max(0.001, uFlow) + uSeed;
+        float f = fbm(p + vec2(t, -t));
+        vec3 acc = vec3(0.0);
+        float wsum = 0.0;
+        for(int i=0;i<12;i++){
+          if(i>=uCount) break;
+          float phase = float(i)*1.618 + t*0.9;
+          float n = fbm(p*1.3 + vec2(cos(phase), sin(phase))*0.6);
+          float w = smoothstep(0.35, 0.95, 0.5 + 0.5*sin(6.2831*n + phase));
+          w = pow(w, max(1.0, uSharpness));
+          acc += getColor(i) * w;
+          wsum += w;
+        }
+        col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
+        col = mix(col, vec3(dot(col, vec3(0.333))), clamp(uWash, 0.0, 0.5));
+      } else {
+        // Oil marbling
+        float t = uTime * 0.18 * max(0.001, uOilFlow) + uSeed;
+        vec2 p0 = swirl(vUv, uOilSwirl, t);
+        vec2 p = (p0 - 0.5) * uOilScale + 0.5;
+        vec3 acc = vec3(0.0);
+        float wsum = 0.0;
+        for(int i=0;i<12;i++){
+          if(i>=uCount) break;
+          float k = float(i) * 0.73 + t*0.6;
+          float band = 0.5 + 0.5*sin(6.2831*(p.x*1.2 + fbm(p*2.0 + vec2(k, -k))*0.6 + k));
+          band = pow(band, max(1.0, uOilContrast));
+          vec3 c = getColor(i);
+          acc += c * band;
+          wsum += band;
+        }
+        col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
+        // simple specular highlight
+        vec3 N = normalize(vNormalW);
+        vec3 L = normalize(uLightDir);
+        vec3 V = vec3(0.0, 0.0, 1.0);
+        vec3 H = normalize(L + V);
+        float spec = pow(max(dot(N, H), 0.0), 16.0 + 64.0*uOilShine);
+        col += spec * 0.25;
       }
-      vec3 col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
-  // paper wash: adjustable desaturation
-  col = mix(col, vec3(dot(col, vec3(0.333))), clamp(uWash, 0.0, 0.5));
       // subtle target bias (like lerp towards targetColorHex)
       col = mix(col, uTargetColor, clamp(uTargetMix, 0.0, 1.0));
       // simple lambert + emissive add (more vivid, like other planets)

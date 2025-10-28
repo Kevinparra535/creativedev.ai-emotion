@@ -6,10 +6,26 @@ import { AudioManager } from '@/audio/AudioManager';
 export const useAudioLeva = () => {
   const { enabled, ambient, ambientVolume, sfxVolume, hoverSfx } = useControls('Audio', {
     enabled: { value: config.AUDIO.ENABLED },
-    ambient: { value: true, label: 'Ambient On' },
-    ambientVolume: { value: config.AUDIO.AMBIENT_VOLUME, min: 0, max: 1, step: 0.01 },
-    sfxVolume: { value: config.AUDIO.SFX_VOLUME, min: 0, max: 1, step: 0.01 },
-    hoverSfx: { value: config.AUDIO.HOVER_ENABLED, label: 'Hover SFX' }
+    ambient: { value: true, label: 'Ambient On', render: (get) => get('enabled') },
+    ambientVolume: {
+      value: config.AUDIO.AMBIENT_VOLUME,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      render: (get) => get('enabled') && get('ambient')
+    },
+    sfxVolume: {
+      value: config.AUDIO.SFX_VOLUME,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      render: (get) => get('enabled')
+    },
+    hoverSfx: {
+      value: config.AUDIO.HOVER_ENABLED,
+      label: 'Hover SFX',
+      render: (get) => get('enabled')
+    }
   });
 
   // initialize/resume context once
