@@ -23,65 +23,72 @@ export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
   const planetConfig = useControls('Planet Emotions', {
     effect: { value: 'Watercolor' as EmotionEffect, options: ['Watercolor', 'Oil'] as const },
     spinSpeed: { value: 1, min: 0.2, max: 3, step: 0.05 },
-    bounce: { value: 0.6, min: 0, max: 1, step: 0.01 },
+    bounce: { value: 0, min: 0, max: 1, step: 0.01 },
     // Watercolor
     wcWash: {
       value: 0.06,
       min: 0,
       max: 0.3,
       step: 0.005,
-      render: (get) => get('effect') === 'Watercolor'
+      // Explicit path to avoid scope issues in Leva when using folders
+      render: (get) => get('Planet Emotions.effect') === 'Watercolor'
     },
     wcScale: {
       value: 1,
       min: 0.5,
       max: 3,
       step: 0.05,
-      render: (get) => get('effect') === 'Watercolor'
+      render: (get) => get('Planet Emotions.effect') === 'Watercolor'
     },
     wcSharpness: {
       value: 2.2,
       min: 1.2,
       max: 3,
       step: 0.05,
-      render: (get) => get('effect') === 'Watercolor'
+      render: (get) => get('Planet Emotions.effect') === 'Watercolor'
     },
     wcFlow: {
       value: 1,
       min: 0.2,
       max: 2,
       step: 0.05,
-      render: (get) => get('effect') === 'Watercolor'
+      render: (get) => get('Planet Emotions.effect') === 'Watercolor'
     },
     // Oil
-    oilSwirl: { value: 0.9, min: 0, max: 2, step: 0.05, render: (get) => get('effect') === 'Oil' },
+    oilSwirl: {
+      value: 0.9,
+      min: 0,
+      max: 2,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Oil'
+    },
     oilScale: {
       value: 1.4,
       min: 0.5,
       max: 3,
       step: 0.05,
-      render: (get) => get('effect') === 'Oil'
+      render: (get) => get('Planet Emotions.effect') === 'Oil'
     },
     oilFlow: {
       value: 0.9,
       min: 0.2,
       max: 2,
       step: 0.05,
-      render: (get) => get('effect') === 'Oil'
+      render: (get) => get('Planet Emotions.effect') === 'Oil'
     },
     oilShine: {
       value: 0.35,
       min: 0,
       max: 1,
       step: 0.01,
-      render: (get) => get('effect') === 'Oil'
+      render: (get) => get('Planet Emotions.effect') === 'Oil'
     },
     oilContrast: {
       value: 2.2,
       min: 1,
       max: 4,
       step: 0.05,
-      render: (get) => get('effect') === 'Oil'
+      render: (get) => get('Planet Emotions.effect') === 'Oil'
     }
   });
   return { planetConfig: planetConfig as EmotionVisuals2 };

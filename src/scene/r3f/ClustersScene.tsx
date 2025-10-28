@@ -20,10 +20,10 @@ import {
 import { Planet, EnergyPulse, PrimaryBlendPlanet } from './objects/Planets';
 import { OrbitingSatellite, OrbitLine } from './objects/Orbits';
 
-import { useUIStore } from '@/stores/uiStore';
 import { useUniverse } from '@/state/universe.store';
 import { useBlendLeva } from '@/hooks/useBlendLeva';
 import { useEmotionVisuals2 } from '@/hooks/useEmotionVisuals2';
+import { useUIStore } from '@/stores/uiStore';
 
 import config from '@/config/config';
 
@@ -255,6 +255,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   const { segments: blendSegments, sharpness: blendSharpness } = useBlendLeva();
   // Emotion Visuals 2.0 controls
   const { planetConfig: ev2 } = useEmotionVisuals2();
+  const focusOn = useUIStore((s) => s.focusOn);
+  const didFocusRef = useRef(false);
 
   // Compute dynamic blended planet from current emotions
   const blend = useMemo(() => {
@@ -265,20 +267,16 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         label: string;
         intensity: number;
       };
-    // Collect colors (colorHex or cluster colorA) and find centroid from cluster positions
+    // Collect colors (colorHex o colorA del cluster)
     const seen = new Set<string>();
     const cols: string[] = [];
-    const pos = new THREE.Vector3();
-    let ccount = 0;
+    // Posición fija: origen del mapa (0,0,0)
+    const pos = new THREE.Vector3(0, 0, 0);
     let totalIntensity = 0;
     for (const e of [...emotions].sort((a, b) => (b.intensity ?? 0.6) - (a.intensity ?? 0.6))) {
       const k = clusterKeyForLabel(e.label);
       if (!k) continue;
       const idx = clusters.findIndex((c) => c.key === k);
-      if (idx >= 0) {
-        pos.add(mainPositions[idx]);
-        ccount++;
-      }
       const keyUniq = `${e.label.toLowerCase()}`;
       if (!seen.has(keyUniq)) {
         cols.push(e.colorHex ?? clusters[idx >= 0 ? idx : 0].colors[0]);
@@ -286,13 +284,22 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
       }
       totalIntensity += e.intensity ?? 0.6;
     }
-    if (ccount > 0) pos.multiplyScalar(1 / ccount);
-    // Pull slightly forward in Z during intro so it’s visible
+    // Pull ligeramente hacia cámara durante la intro para asegurar visibilidad
     pos.z += -2 + (1 - intro.tPlanet) * 8;
     const intensity = Math.min(1, totalIntensity / Math.max(1, emotions.length));
     const label = cols.length ? 'primary blend' : '';
     return { colors: cols, pos, label, intensity };
   }, [emotions, clusters, mainPositions, intro.tPlanet]);
+
+  // Trigger a camera focus to the blend planet when it appears
+  useEffect(() => {
+    if (!blend || didFocusRef.current) return;
+    // Wait a bit into the intro so it's on-screen
+    if (intro.tPlanet > 0.6) {
+      didFocusRef.current = true;
+      focusOn({ target: [blend.pos.x, blend.pos.y, blend.pos.z], distance: 14 });
+    }
+  }, [blend, intro.tPlanet, focusOn]);
 
   return (
     <group>

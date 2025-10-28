@@ -1,45 +1,42 @@
 ## Qué es (resumen)
-“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes/micro-animaciones en DOM y una galaxia R3F con planetas, enlaces “energéticos”, audio, un planeta con texturas PBR y un Planeta Blend de primarias con efectos (Watercolor | Oil).
+“Lo que sientes al escribir, lo ves moverse”. Texto → análisis emocional en tiempo real → visuales sincronizados: DOM (gradientes/micro-animaciones) y R3F (galaxias, enlaces “energéticos”, audio, PBR y Planeta Blend con efectos Watercolor | Oil).
 
 ## Arquitectura y flujo
 - React 19 + TS + Vite (SWC). Entrypoint: `src/main.tsx` → `src/App.tsx`; alias `@` → `src`.
 - Input (`features/prompt/PromptInput.tsx`) → `useEmotionEngine` (debounce 350–450ms, cancelación) → stores (UI: `src/stores/*`, dominio: `src/state/universe.store.ts`).
-- Servicios IA: `EmotionServiceFactory` expone `emotionService.{analyze, analyzeMulti, analyzeToGraph}`; online (`OpenIAAdapter`) u offline (`ai/local-emotions`) según `VITE_EMOTION_MODE`/clave.
-- DOM: `scene/dom/Vizualizer.tsx` usa `emotion-presets` (colores/motion/particles).
-- R3F: `scene/r3f/R3FCanvas.tsx` único canvas; escena principal `scene/r3f/ClustersScene.tsx` (planetas/satélites/órbitas/enlaces + Planeta Blend); `UniverseScene` como alternativa de grafo completo.
+- Servicios IA vía factory: `EmotionServiceFactory` → `emotionService.{analyze, analyzeMulti, analyzeToGraph}` con `OpenIAAdapter` (online) o `ai/local-emotions` (offline) según `VITE_EMOTION_MODE`/API key.
+- DOM: `scene/dom/Vizualizer.tsx` aplica `config/emotion-presets`.
+- R3F: `scene/r3f/R3FCanvas.tsx` (único canvas); escena principal `scene/r3f/ClustersScene.tsx` (planetas/satélites/órbitas/enlaces + Planeta Blend). `UniverseScene` es alternativa de grafo completo.
 
 ## Modo de análisis y contratos
 - Modo: `VITE_EMOTION_MODE=online|offline|auto` (auto por defecto).
-- Payload multi esperado: `{ version: 1, emotions[], pairs[], global? }`.
-- Cada emoción: `id?`, `label`, `valence[-1..1]`, `arousal[0..1]`, `intensity/weight`, `colors?`, `relations?`.
-- Mapeo a dominio en `src/data/mappers.ts` → `{ emotions: Emotion[]; links: Link[] }` consumidos por `ClustersScene`.
+- Payload multi (IA/local): `{ version: 1, emotions[], pairs[], global? }`.
+- Emoción: `id?`, `label`, `valence[-1..1]`, `arousal[0..1]`, `intensity|weight`, `colors?`, `relations?`.
+- Mapeo: `src/data/mappers.ts` → `{ emotions: Emotion[]; links: Link[] }` para `ClustersScene`. Validación estricta Zod + parser permisivo (online) en `utils/validators.ts`/`utils/iaUtiils.ts`.
 
-## Convenciones del proyecto
-- Importa con `@/…`; evita `process.env`: usa `import.meta.env.VITE_*` (ver `src/config/config.ts` y `env_template`).
-- Lógica de IA centralizada en `services/EmotionServiceFactory.ts`/`services/OpenIAAdapter.ts` y helpers `utils/iaUtiils.ts`, `ai/local-emotions.ts`.
-- R3F: un solo `R3FCanvas`; añade escenas como hijos. Objetos en `scene/r3f/objects/*`; utils en `scene/r3f/utils/*`.
-- Reglas de visibilidad en `ClustersScene`: energía por defecto oculta durante `thinking` o si hay `links`; mostrar corrientes cuando `links.length > 0`.
-- Planeta Blend: renderizado en `objects/Planets.tsx` con shader paramétrico y controles en `useEmotionVisuals2.ts`.
-- Efectos disponibles en EV 2.0: `Watercolor` (wash/scale/sharpness/flow) y `Oil` (swirl/scale/flow/shine/contrast).
-- Quality del Blend: `useBlendLeva.ts` (segmentos + nitidez). PostFX sólo desde `useVisualLeva.ts`. Nebula retirada.
+## Convenciones y patrones
+- Importa con `@/...`; no uses `process.env`: usa `import.meta.env.VITE_*` (ver `env_template` y `src/config/config.ts`).
+- IA sólo desde `services/EmotionServiceFactory.ts`/`services/OpenIAAdapter.ts`; heurística en `ai/local-emotions.ts`.
+- R3F: un solo `R3FCanvas`; objetos en `scene/r3f/objects/*`, utilidades en `scene/r3f/utils/*`.
+- Reglas de visibilidad (`ClustersScene`): enlaces por defecto ocultos durante `thinking` o si hay `links`; mostrar corrientes cuando `links.length > 0`.
+- Planeta Blend en `objects/Planets.tsx`; controles en `hooks/useEmotionVisuals2.ts` y calidad en `hooks/useBlendLeva.ts`. PostFX sólo desde `hooks/useVisualLeva.ts` (Nebula retirada).
 
 ## Workflows de dev
-- `npm run dev` HMR; `npm run build` (TS + Vite); `npm run preview` (serve build).
-- Lint/format: `npm run lint`, `npm run lint:fix`, `npm run format(:check)`.
-- Debug visual: usa Leva (`useVisualLeva`, `useEmotionVisuals2`, `useBlendLeva`, `useAudioLeva`) y `src/utils/logger.ts` para trazas.
+- Ejecutar: `npm run dev` (HMR, `vite --host`), `npm run build` (TS + Vite), `npm run preview`.
+- Lint/format: `npm run lint`, `npm run lint:fix`, `npm run format`, `npm run format:check`.
+- Debug visual: Leva (`useVisualLeva`, `useEmotionVisuals2`, `useBlendLeva`, `useAudioLeva`) y trazas con `src/utils/logger.ts`.
 
 ## Integraciones y gotchas
-- Vite está fijado a `rolldown-vite@7.1.14` (overrides). Mantener salvo actualización consciente.
-- SWC activo: no añadir Babel. Respeta alias `@`.
-- OpenAI (opcional): `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`. Sin clave → heurística local.
-- Audio/texturas PBR se configuran en `src/config/config.ts` (`AUDIO`, `TEXTURES`). AO requiere `uv2` (ya duplicado en esfera PBR).
-- Re-balance de enlaces: si el backend no provee pares cruzados de cluster, el cliente sintetiza 1–2 links para mantener continuidad (ver `EmotionServiceFactory.analyzeToGraph`).
+- Vite fijado a `rolldown-vite@7.1.14` (overrides). Mantener salvo actualización consciente.
+- SWC activo: no añadas Babel. Respeta alias `@`.
+- OpenAI (opcional): `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`. Sin clave → heurística local (auto).
+- Audio/texturas PBR: configúralas en `src/config/config.ts` (`AUDIO`, `TEXTURES`). AO requiere `uv2` (ya duplicado en la esfera PBR).
+- Re-balance de enlaces: si el backend no cruza clusters, el cliente sintetiza 1–2 links (ver `EmotionServiceFactory.analyzeToGraph`/`OpenIAAdapter.analyzeToGraph`).
 
 ## Archivos de referencia
-- `package.json`, `vite.config.ts` (alias/host), `src/config/config.ts`.
-- `src/hooks/useEmotionEngine.ts`, `src/services/EmotionServiceFactory.ts`, `src/services/OpenIAAdapter.ts`, `src/ai/local-emotions.ts`.
-- `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`.
-- `scene/dom/Vizualizer.tsx`, `scene/r3f/R3FCanvas.tsx`, `scene/r3f/ClustersScene.tsx`, `scene/r3f/objects/*`.
-- Hooks de controles: `src/hooks/useEmotionVisuals2.ts`, `src/hooks/useBlendLeva.ts`, `src/hooks/useVisualLeva.ts`.
+- Config: `package.json`, `vite.config.ts`, `src/config/config.ts`.
+- IA: `src/services/EmotionServiceFactory.ts`, `src/services/OpenIAAdapter.ts`, `src/ai/local-emotions.ts`, `src/data/mappers.ts`.
+- R3F/DOM: `scene/dom/Vizualizer.tsx`, `scene/r3f/R3FCanvas.tsx`, `scene/r3f/ClustersScene.tsx`, `scene/r3f/objects/*`, `scene/r3f/utils/*`.
+- UI integración: `ui/components/MainScreen.tsx`.
 
-Ejemplos: `ui/components/MainScreen.tsx` integra el engine y publica en stores; `ClustersScene` rinde planetas/enlaces con intro animada y corrientes efímeras según `links`; el Planeta Blend se posiciona en el centroide de clusters activos.
+Ejemplos clave: `MainScreen.tsx` integra el engine y publica en stores; `ClustersScene` rinde planetas/enlaces con intro animada y corrientes efímeras; el Planeta Blend se sitúa en el centroide de clusters activos.

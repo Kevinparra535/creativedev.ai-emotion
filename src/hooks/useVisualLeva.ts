@@ -22,21 +22,21 @@ export function useVisualLeva(): { post: VisualPostSettings } {
       min: 0,
       max: 2,
       step: 0.05,
-      render: (get) => get('bloomEnabled')
+      render: (get) => get('Visuals / Post.bloomEnabled')
     },
     bloomThreshold: {
       value: 0,
       min: 0,
       max: 1,
       step: 0.01,
-      render: (get) => get('bloomEnabled')
+      render: (get) => get('Visuals / Post.bloomEnabled')
     },
     bloomSmoothing: {
       value: 0.9,
       min: 0,
       max: 1,
       step: 0.01,
-      render: (get) => get('bloomEnabled')
+      render: (get) => get('Visuals / Post.bloomEnabled')
     },
     noiseEnabled: { value: true },
     noiseOpacity: {
@@ -44,7 +44,7 @@ export function useVisualLeva(): { post: VisualPostSettings } {
       min: 0,
       max: 0.1,
       step: 0.005,
-      render: (get) => get('noiseEnabled')
+      render: (get) => get('Visuals / Post.noiseEnabled')
     },
     vignetteEnabled: { value: true },
     vignetteOffset: {
@@ -52,14 +52,14 @@ export function useVisualLeva(): { post: VisualPostSettings } {
       min: 0,
       max: 0.5,
       step: 0.01,
-      render: (get) => get('vignetteEnabled')
+      render: (get) => get('Visuals / Post.vignetteEnabled')
     },
     vignetteDarkness: {
       value: 1.1,
       min: 0.2,
       max: 2,
       step: 0.05,
-      render: (get) => get('vignetteEnabled')
+      render: (get) => get('Visuals / Post.vignetteEnabled')
     },
     chromaEnabled: { value: false },
     chromaOffset: {
@@ -67,7 +67,7 @@ export function useVisualLeva(): { post: VisualPostSettings } {
       min: 0,
       max: 0.01,
       step: 0.0005,
-      render: (get) => get('chromaEnabled')
+      render: (get) => get('Visuals / Post.chromaEnabled')
     }
   });
 

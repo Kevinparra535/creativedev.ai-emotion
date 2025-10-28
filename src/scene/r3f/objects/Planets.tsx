@@ -338,15 +338,19 @@ export function PrimaryBlendPlanet({
   oilShine?: number;
   oilContrast?: number;
 }>) {
-  const pos = Array.isArray(position) ? position : position.toArray();
-  const n = Math.max(0, Math.min(12, colors.length));
+  const [hovered, setHovered] = useState<boolean>(false);
+
   const palette = useMemo(() => colors.slice(0, 12).map((h) => new THREE.Color(h)), [colors]);
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const tRef = useRef(0);
   const pulseRef = useRef(0);
-  const [hovered, setHovered] = useState<boolean>(false);
+
   useCursor(interactive && hovered);
+
+  const pos = Array.isArray(position) ? position : position.toArray();
+  const n = Math.max(0, Math.min(12, colors.length));
+
   // Keep a smooth target color for subtle bias
   const targetColorRef = useRef(new THREE.Color('#ffffff'));
   const uniforms = useMemo(() => {
@@ -472,7 +476,7 @@ export function PrimaryBlendPlanet({
 
   const vert = /* glsl */ `
     varying vec3 vNormalW;
-    varying vec2 vUv;
+    varying vec2 vUv; // retained for compatibility, not used in shader to avoid seams
     void main(){
       vUv = uv;
       vec4 wPos = modelMatrix * vec4(position, 1.0);
@@ -542,10 +546,13 @@ export function PrimaryBlendPlanet({
       return s + 0.5;
     }
     void main(){
+      // Seamless base UV from geometry normal: continuous on sphere
+      vec3 Nw = normalize(vNormalW);
+      vec2 baseUV = Nw.xz * 0.5 + 0.5;
       vec3 col;
       if(uEffect == 0){
         // Watercolor
-        vec2 p = vUv * uScale;
+        vec2 p = baseUV * uScale;
         float t = uTime * 0.15 * max(0.001, uFlow) + uSeed;
         float f = fbm(p + vec2(t, -t));
         vec3 acc = vec3(0.0);
@@ -564,7 +571,7 @@ export function PrimaryBlendPlanet({
       } else {
         // Oil marbling
         float t = uTime * 0.18 * max(0.001, uOilFlow) + uSeed;
-        vec2 p0 = swirl(vUv, uOilSwirl, t);
+        vec2 p0 = swirl(baseUV, uOilSwirl, t);
         vec2 p = (p0 - 0.5) * uOilScale + 0.5;
         vec3 acc = vec3(0.0);
         float wsum = 0.0;
