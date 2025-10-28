@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useAudioLeva } from '@/hooks/useAudioLeva';
-import { useEmotionLeva } from '@/hooks/useEmotionLeva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import LoaderIndicator from './LoaderIndicator';
@@ -39,13 +38,7 @@ const MainScreen = () => {
   useAudioLeva();
 
   // Leva: emotion visuals + transparency monitors
-  const {
-    style: _style,
-    intensity: _intensity,
-    speed: _speed,
-    noise: _noise,
-    grain: _grain
-  } = useEmotionLeva(emotion ?? null, thinking, analyzing);
+  // Emotion Visuals (v1) removed
 
   useEffect(() => {
     setCurrentEmotion(emotion ?? null);

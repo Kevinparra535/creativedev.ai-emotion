@@ -23,6 +23,7 @@ import { OrbitingSatellite, OrbitLine } from './objects/Orbits';
 import { useUIStore } from '@/stores/uiStore';
 import { useUniverse } from '@/state/universe.store';
 import { useBlendLeva } from '@/hooks/useBlendLeva';
+import { useEmotionVisuals2 } from '@/hooks/useEmotionVisuals2';
 
 import config from '@/config/config';
 
@@ -252,6 +253,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   const showPairCurrents = links.length > 0;
   // Blend quality controls
   const { segments: blendSegments, sharpness: blendSharpness } = useBlendLeva();
+  // Emotion Visuals 2.0 controls
+  const ev2 = useEmotionVisuals2();
 
   // Compute dynamic blended planet from current emotions
   const blend = useMemo(() => {
@@ -300,10 +303,13 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           colors={blend.colors}
           label={blend.label}
           radius={1.6 + Math.min(1.4, Math.sqrt(Math.max(0, blend.colors.length - 1)) * 0.18)}
-          intensity={blend.intensity}
+          intensity={Math.max(0, Math.min(1, ev2.bounce))}
           speed={0.6}
           segments={blendSegments}
           sharpness={blendSharpness}
+          spinSpeed={ev2.spinSpeed}
+          targetColorHex={ev2.useTextureColor ? ev2.textureColor : undefined}
+          targetMix={ev2.useTextureColor ? 0.6 : 0.25}
         />
       )}
       {/* Energy links between main planets (only primaries). Hidden while thinking or when backend pairs are present. */}

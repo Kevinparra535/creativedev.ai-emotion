@@ -296,7 +296,9 @@ export function PrimaryBlendPlanet({
   pulseIntensity = 0,
   targetColorHex,
   segments = 128,
-  sharpness = 2.2
+  sharpness = 2.2,
+  spinSpeed = 1,
+  targetMix = 0.25
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -313,6 +315,8 @@ export function PrimaryBlendPlanet({
   targetColorHex?: string;
   segments?: number;
   sharpness?: number;
+  spinSpeed?: number;
+  targetMix?: number;
 }>) {
   const pos = Array.isArray(position) ? position : position.toArray();
   const n = Math.max(0, Math.min(12, colors.length));
@@ -377,7 +381,7 @@ export function PrimaryBlendPlanet({
       const s = radius * (1 + Math.sin(tRef.current * 2.2) * amp + micro);
       meshRef.current.scale.set(s, s, s);
       // constant spin: full 360° every ~24s
-      const spinPeriodSec = 24;
+      const spinPeriodSec = 24 / Math.max(0.001, spinSpeed);
       meshRef.current.rotation.y += ((Math.PI * 2) / spinPeriodSec) * delta;
     }
     // Compute brightness like Planet's emissive flow (without halo)
@@ -511,7 +515,10 @@ export function PrimaryBlendPlanet({
       }
     >
       <mesh ref={meshRef} castShadow receiveShadow>
-        <sphereGeometry key={`blend-${segments}`} args={[1, Math.max(16, segments), Math.max(12, Math.round(segments*0.75))]} />
+        <sphereGeometry
+          key={`blend-${segments}`}
+          args={[1, Math.max(16, segments), Math.max(12, Math.round(segments * 0.75))]}
+        />
         <shaderMaterial
           ref={matRef as any}
           uniforms={uniforms}

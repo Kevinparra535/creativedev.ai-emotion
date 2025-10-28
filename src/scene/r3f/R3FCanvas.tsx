@@ -13,9 +13,6 @@ import {
 import { Vector2 } from 'three';
 
 import ClustersScene from './ClustersScene';
-import { useEmotionLeva } from '@/hooks/useEmotionLeva';
-import { useEmotionStore } from '@/stores/emotionStore';
-
 import { useUIStore } from '@/stores/uiStore';
 import { useUniverse } from '@/state/universe.store';
 import { useVisualLeva } from '@/hooks/useVisualLeva';
@@ -172,52 +169,41 @@ function BackgroundTone() {
 
 function PostFX() {
   const { post } = useVisualLeva();
-  // Read global emotion + Leva emotion visuals to bias post effects (noise)
-  const currentEmotion = useEmotionStore((s) => s.current);
-  const thinking = useUIStore((s) => s.thinking);
-  const { noise, style } = useEmotionLeva(currentEmotion, thinking, false);
   const children: ReactElement[] = [];
   if (post.bloomEnabled) {
-    const bloomMul = style === 'Dreamy' ? 1.25 : style === 'Minimal' ? 0.85 : 1.0;
     children.push(
       <Bloom
         key='bloom'
         luminanceThreshold={post.bloomThreshold}
         luminanceSmoothing={post.bloomSmoothing}
-        intensity={post.bloomIntensity * bloomMul}
+        intensity={post.bloomIntensity}
         height={300}
       />
     );
   }
   if (post.noiseEnabled) {
-    const styleNoiseExtra = style === 'Glitch' ? 0.05 : style === 'Minimal' ? -0.01 : 0;
-    const opacity = Math.max(
-      0,
-      Math.max(post.noiseOpacity, Math.max(0, Math.min(1, noise)) * 0.1) + styleNoiseExtra
-    );
+    const opacity = Math.max(0, post.noiseOpacity);
     if (opacity > 0) children.push(<Noise key='noise' opacity={opacity} />);
   }
-  const wantVignette = post.vignetteEnabled || style === 'Memphis' || style === 'Nature';
+  const wantVignette = post.vignetteEnabled;
   if (wantVignette) {
-    const darkMul = style === 'Memphis' ? 1.1 : style === 'Minimal' ? 0.9 : 1.0;
     children.push(
       <Vignette
         key='vignette'
         eskil={false}
         offset={post.vignetteOffset}
-        darkness={post.vignetteDarkness * darkMul}
+        darkness={post.vignetteDarkness}
       />
     );
   }
-  const wantChroma = post.chromaEnabled || style === 'Cyber' || style === 'Glitch';
+  const wantChroma = post.chromaEnabled;
   if (wantChroma) {
-    const base =
-      style === 'Glitch'
-        ? Math.max(0.0035, post.chromaOffset)
-        : style === 'Cyber'
-          ? Math.max(0.002, post.chromaOffset)
-          : post.chromaOffset;
-    children.push(<ChromaticAberration key='chroma' offset={new Vector2(base, -base)} />);
+    children.push(
+      <ChromaticAberration
+        key='chroma'
+        offset={new Vector2(post.chromaOffset, -post.chromaOffset)}
+      />
+    );
   }
   return <EffectComposer>{children}</EffectComposer>;
 }
