@@ -2,7 +2,7 @@ import { Canvas, extend, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useMemo, useRef, type ReactElement } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import { CameraControls, CameraShake, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
+import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
 import {
   Bloom,
   EffectComposer,

@@ -1,18 +1,11 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useCallback,
-  type ChangeEvent
-} from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useAudioLeva } from '@/hooks/useAudioLeva';
 import { useEmotionLeva } from '@/hooks/useEmotionLeva';
 
 import PromptInput from '@/features/prompt/PromptInput';
 import LoaderIndicator from './LoaderIndicator';
-import Vizualizer from '@/scene/dom/Vizualizer';
+// import Vizualizer from '@/scene/dom/Vizualizer';
 
 import { useEmotionEngine } from '@/hooks/useEmotionEngine';
 
@@ -21,7 +14,7 @@ import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
 import { useUniverse } from '@/state/universe.store';
 import { emotionService } from '@/services/EmotionServiceFactory';
-import config from '@/config/config';
+// import config from '@/config/config';
 import { useUIStore } from '@/stores/uiStore';
 
 const MainScreen = () => {
@@ -29,7 +22,7 @@ const MainScreen = () => {
   const [target, setTarget] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [showShape, setShowShape] = useState(true);
   // const [reading, setReading] = useState(false);
-  const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
+  // const [shiftY, setShiftY] = useState<number>(Math.round(window.innerHeight * 0.3));
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -89,11 +82,11 @@ const MainScreen = () => {
     setText(e.target.value);
   };
 
-  useEffect(() => {
-    const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  // useEffect(() => {
+  //   const onResize = () => setShiftY(Math.round(window.innerHeight * 0.35));
+  //   window.addEventListener('resize', onResize);
+  //   return () => window.removeEventListener('resize', onResize);
+  // }, []);
 
   useLayoutEffect(() => {
     const measure = () => {

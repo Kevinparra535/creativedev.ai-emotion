@@ -278,3 +278,251 @@ export function EnergyPulse({
     </mesh>
   );
 }
+
+// Watercolor-like blended planet built from multiple emotion colors
+export function PrimaryBlendPlanet({
+  position,
+  colors,
+  label = 'blend',
+  radius = 1.4,
+  intensity = 0.6,
+  speed = 0.6,
+  // Effects parity with Planet (without halo)
+  emissiveIntensity = 0.75,
+  interactive = true,
+  hoverEmissive,
+  thinking = false,
+  thinkingBlink = 0,
+  pulseIntensity = 0,
+  targetColorHex
+}: Readonly<{
+  position: THREE.Vector3 | [number, number, number];
+  colors: string[]; // hex colors to blend
+  label?: string;
+  radius?: number;
+  intensity?: number; // drives breathing
+  speed?: number; // flow speed
+  emissiveIntensity?: number;
+  interactive?: boolean;
+  hoverEmissive?: number;
+  thinking?: boolean;
+  thinkingBlink?: number;
+  pulseIntensity?: number;
+  targetColorHex?: string;
+}>) {
+  const pos = Array.isArray(position) ? position : position.toArray();
+  const n = Math.max(0, Math.min(12, colors.length));
+  const palette = useMemo(() => colors.slice(0, 12).map((h) => new THREE.Color(h)), [colors]);
+  const matRef = useRef<THREE.ShaderMaterial>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const tRef = useRef(0);
+  const pulseRef = useRef(0);
+  const [hovered, setHovered] = useState<boolean>(false);
+  useCursor(interactive && hovered);
+  // Keep a smooth target color for subtle bias
+  const targetColorRef = useRef(new THREE.Color('#ffffff'));
+  const uniforms = useMemo(() => {
+    const cols = new Float32Array(12 * 3);
+    for (let i = 0; i < 12; i++) {
+      const c = palette[i] ?? new THREE.Color('#444');
+      cols[i * 3 + 0] = c.r;
+      cols[i * 3 + 1] = c.g;
+      cols[i * 3 + 2] = c.b;
+    }
+    return {
+      uTime: { value: 0 },
+      uScale: { value: 2.2 },
+      uSeed: { value: Math.random() * 1000 },
+      uCount: { value: n },
+      uColors: { value: cols },
+      uLightDir: { value: new THREE.Vector3(0.4, 0.7, 0.5).normalize() },
+      uAlpha: { value: 1 },
+      // extra effects
+      uBrightness: { value: emissiveIntensity },
+      uTargetColor: { value: new THREE.Vector3(1, 1, 1) },
+      uTargetMix: { value: 0 }
+    } as Record<string, any>;
+  }, [palette, n, emissiveIntensity]);
+
+  // Update colors if palette changes
+  useMemo(() => {
+    if (!matRef.current) return;
+    const cols = matRef.current.uniforms.uColors.value as Float32Array;
+    for (let i = 0; i < 12; i++) {
+      const c = palette[i] ?? new THREE.Color('#444');
+      cols[i * 3 + 0] = c.r;
+      cols[i * 3 + 1] = c.g;
+      cols[i * 3 + 2] = c.b;
+    }
+    matRef.current.uniforms.uCount.value = n;
+  }, [palette, n]);
+
+  useFrame((_, delta) => {
+    tRef.current += delta * (0.5 + speed);
+    if (matRef.current) matRef.current.uniforms.uTime.value = tRef.current;
+    // Scale breathing + hover pulse
+    if (meshRef.current) {
+      // exponential decay of pulse
+      pulseRef.current += (0 - pulseRef.current) * Math.min(1, delta * 4);
+      const amp = 0.06 + 0.06 * intensity + 0.06 * pulseRef.current;
+      // include intensity-driven micro-pulse similar to Planet
+      const freq = 4 * Math.max(0, pulseIntensity);
+      const micro =
+        Math.sin(tRef.current * Math.max(0.001, freq)) * 0.06 * Math.max(0, pulseIntensity);
+      const s = radius * (1 + Math.sin(tRef.current * 2.2) * amp + micro);
+      meshRef.current.scale.set(s, s, s);
+    }
+    // Compute brightness like Planet's emissive flow (without halo)
+    const dimBase = 0.008;
+    const baseThinking = thinking ? dimBase : emissiveIntensity;
+    const hoverBase =
+      hovered && interactive ? (hoverEmissive ?? baseThinking * 1.6) : baseThinking;
+    const blinkBoost = thinking ? (thinkingBlink ?? 0) * 0.08 : 0;
+    const boosted = (hoverBase + blinkBoost) * (1 + 0.6 * pulseRef.current);
+    if (matRef.current) {
+      matRef.current.uniforms.uBrightness.value = boosted;
+    }
+
+    // Target color bias
+    if (targetColorHex && matRef.current) {
+      const target = new THREE.Color(targetColorHex);
+      targetColorRef.current.lerp(target, Math.min(1, delta * 2));
+      const v = targetColorRef.current;
+      matRef.current.uniforms.uTargetColor.value.set(v.r, v.g, v.b);
+      matRef.current.uniforms.uTargetMix.value = 0.25; // subtle bias
+    } else if (matRef.current) {
+      matRef.current.uniforms.uTargetMix.value = 0.0;
+    }
+  });
+
+  const vert = /* glsl */ `
+    varying vec3 vNormalW;
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      vec4 wPos = modelMatrix * vec4(position, 1.0);
+      vNormalW = normalize(mat3(modelMatrix) * normal);
+      gl_Position = projectionMatrix * viewMatrix * wPos;
+    }
+  `;
+
+  const frag = /* glsl */ `
+    precision highp float;
+    varying vec3 vNormalW;
+    varying vec2 vUv;
+    uniform float uTime;
+    uniform float uScale;
+    uniform float uSeed;
+    uniform int uCount;
+    uniform vec3 uLightDir;
+    uniform float uAlpha;
+    uniform float uColors[36]; // 12 * 3 rgb
+    uniform float uBrightness;
+    uniform vec3 uTargetColor;
+    uniform float uTargetMix;
+
+    // Hash/Noise helpers
+    float hash(vec2 p){
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+    }
+    float noise(vec2 p){
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      float a = hash(i);
+      float b = hash(i + vec2(1.0,0.0));
+      float c = hash(i + vec2(0.0,1.0));
+      float d = hash(i + vec2(1.0,1.0));
+      vec2 u = f*f*(3.0-2.0*f);
+      return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+    }
+    float fbm(vec2 p){
+      float v = 0.0;
+      float a = 0.5;
+      for(int i=0;i<5;i++){
+        v += a*noise(p); p *= 2.02; a *= 0.5;
+      }
+      return v;
+    }
+    vec3 getColor(int i){
+      int idx = i*3;
+      return vec3(uColors[idx], uColors[idx+1], uColors[idx+2]);
+    }
+    void main(){
+      // watercolor-ish banded blend
+      vec2 p = vUv * uScale;
+      float t = uTime * 0.15 + uSeed;
+      float f = fbm(p + vec2(t, -t));
+      // weights per color using phase-shifted fbm + softmax-like
+      vec3 acc = vec3(0.0);
+      float wsum = 0.0;
+      for(int i=0;i<12;i++){
+        if(i>=uCount) break;
+        float phase = float(i)*1.618 + t*0.9;
+        float n = fbm(p*1.3 + vec2(cos(phase), sin(phase))*0.6);
+        float w = smoothstep(0.35, 0.95, 0.5 + 0.5*sin(6.2831*n + phase));
+        // emphasize a few colors per fragment
+        w = pow(w, 2.2);
+        acc += getColor(i) * w;
+        wsum += w;
+      }
+      vec3 col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
+      // paper wash: subtle desaturation and light grain
+      col = mix(col, vec3(dot(col, vec3(0.333))), 0.08);
+      // subtle target bias (like lerp towards targetColorHex)
+      col = mix(col, uTargetColor, clamp(uTargetMix, 0.0, 1.0));
+      // simple lambert lighting and emissive-like brightness factor
+      float diff = clamp(dot(normalize(vNormalW), normalize(uLightDir)), 0.12, 1.0);
+      col *= diff * (1.0 + uBrightness);
+      gl_FragColor = vec4(col, uAlpha);
+    }
+  `;
+
+  return (
+    <group
+      position={pos}
+      onPointerOver={
+        interactive
+          ? (e) => {
+              e.stopPropagation();
+              setHovered(true);
+              // play hover sfx for this planet's label
+              AudioManager.playHoverForEmotion(label).catch(() => {});
+              // trigger visual pulse
+              pulseRef.current = 1;
+            }
+          : undefined
+      }
+      onPointerOut={
+        interactive
+          ? (e) => {
+              e.stopPropagation();
+              setHovered(false);
+            }
+          : undefined
+      }
+    >
+      <mesh ref={meshRef} castShadow receiveShadow>
+        <sphereGeometry args={[1, 128, 128]} />
+        <shaderMaterial
+          ref={matRef as any}
+          uniforms={uniforms}
+          vertexShader={vert}
+          fragmentShader={frag}
+          transparent
+        />
+      </mesh>
+      <group position={[0, radius + 0.28, 0]}>
+        <Text
+          fontSize={Math.max(0.18, radius * 0.28)}
+          color={'#ffffff'}
+          anchorX='center'
+          anchorY='middle'
+          outlineWidth={0.002}
+          outlineColor='#000'
+        >
+          {label}
+        </Text>
+      </group>
+    </group>
+  );
+}

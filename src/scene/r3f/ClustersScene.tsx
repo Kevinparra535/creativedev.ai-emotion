@@ -17,7 +17,7 @@ import {
   type EnergyLinkAgg
 } from '@/utils/sceneUtils';
 
-import { Planet, EnergyPulse } from './objects/Planets';
+import { Planet, EnergyPulse, PrimaryBlendPlanet } from './objects/Planets';
 import { OrbitingSatellite, OrbitLine } from './objects/Orbits';
 
 import { useUIStore } from '@/stores/uiStore';
@@ -250,8 +250,57 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   const showDefaultLinks = !thinking && links.length === 0;
   const showPairCurrents = links.length > 0;
 
+  // Compute dynamic blended planet from current emotions
+  const blend = useMemo(() => {
+    if (!emotions || emotions.length === 0)
+      return null as null | {
+        colors: string[];
+        pos: THREE.Vector3;
+        label: string;
+        intensity: number;
+      };
+    // Collect colors (colorHex or cluster colorA) and find centroid from cluster positions
+    const seen = new Set<string>();
+    const cols: string[] = [];
+    const pos = new THREE.Vector3();
+    let ccount = 0;
+    let totalIntensity = 0;
+    for (const e of [...emotions].sort((a, b) => (b.intensity ?? 0.6) - (a.intensity ?? 0.6))) {
+      const k = clusterKeyForLabel(e.label);
+      if (!k) continue;
+      const idx = clusters.findIndex((c) => c.key === k);
+      if (idx >= 0) {
+        pos.add(mainPositions[idx]);
+        ccount++;
+      }
+      const keyUniq = `${e.label.toLowerCase()}`;
+      if (!seen.has(keyUniq)) {
+        cols.push(e.colorHex ?? clusters[idx >= 0 ? idx : 0].colors[0]);
+        seen.add(keyUniq);
+      }
+      totalIntensity += e.intensity ?? 0.6;
+    }
+    if (ccount > 0) pos.multiplyScalar(1 / ccount);
+    // Pull slightly forward in Z during intro so it’s visible
+    pos.z += -2 + (1 - intro.tPlanet) * 8;
+    const intensity = Math.min(1, totalIntensity / Math.max(1, emotions.length));
+    const label = cols.length ? 'primary blend' : '';
+    return { colors: cols, pos, label, intensity };
+  }, [emotions, clusters, mainPositions, intro.tPlanet]);
+
   return (
     <group>
+      {/* Dynamic watercolor planet blended from current primary emotions */}
+      {blend && blend.colors.length > 0 && (
+        <PrimaryBlendPlanet
+          position={blend.pos}
+          colors={blend.colors}
+          label={blend.label}
+          radius={1.6 + Math.min(1.4, Math.sqrt(Math.max(0, blend.colors.length - 1)) * 0.18)}
+          intensity={blend.intensity}
+          speed={0.6}
+        />
+      )}
       {/* Energy links between main planets (only primaries). Hidden while thinking or when backend pairs are present. */}
       <group visible={showDefaultLinks}>
         {energyLinks.map((el, i) => {
