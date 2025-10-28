@@ -1,77 +1,35 @@
-# React + TypeScript + Vite
+!["Emotion Universe cover"](docs/readme_cover.png)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# CreativeDev: Emotion Universe [Live demo](https://labs-ai-emotion.web.app/) | [v2-r3f](https://github.com/Kevinparra535/creativedev.ai-emotion/tree/v2-r3f)
 
-Currently, two official plugins are available:
+![R3F](https://img.shields.io/badge/R3F-React%20Three%20Fiber-black)
+![WebGL2](https://img.shields.io/badge/WebGL2-FBO-blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Text → real-time emotional analysis → synchronized DOM + R3F visuals (planets, energy links, audio, PBR, and a Blend Planet with live shader effects: Watercolor, Oil, Link, Holographic, Voronoi).
+This README keeps only the essentials; extended content lives in [docs/](docs/README.md).
 
-## React Compiler
+## Stack (brief)
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+- React 19 + TypeScript + Vite 7 (SWC)
+- Three.js with React Three Fiber (@react-three/fiber, @react-three/drei)
+- PostFX (Bloom, Noise, Vignette, Chromatic Aberration) with a lightweight pipeline
+- State: Zustand; Controls: Leva; Styling: styled-components
 
-## Expanding the ESLint configuration
+## Quick start
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Dev: `npm run dev`
+- Build: `npm run build`
+- Preview: `npm run preview`
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Note: Use import.meta.env with VITE\_\* keys; do not expose the full process.env.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Documentation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Docs index: [docs/README.md](docs/README.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Data contracts: [docs/data-contracts.md](docs/data-contracts.md)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Credits
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-## Documentación
-
-- Arquitectura: consulte `docs/architecture.md` para una descripción de la estructura, flujo de datos, contratos y cómo extender el sistema.
+- Audio, textures, and shader techniques inspired by the R3F community and Three.js examples.
