@@ -9,13 +9,14 @@ import { EnergyRules } from '@/systems/rules/EnergyRules';
 import { mapAIToDomain } from '@/data/mappers';
 import { buildPayloadFromText, localHeuristic } from '@/ai/local-emotions';
 import { OpenIAAdapter } from '@/services/OpenIAAdapter';
+import { clusterKeyForLabel } from '@/config/emotion-clusters';
+
+type EmotionGraphResult = Promise<{ emotions: Emotion[]; links: Link[]; galaxies: Galaxy[] }>;
 
 export interface EmotionService {
   analyze(text: string): Promise<Emotion>;
   analyzeMulti(text: string): Promise<{ emotions: Emotion[]; links: Link[] }>;
-  analyzeToGraph(
-    text: string
-  ): Promise<{ emotions: Emotion[]; links: Link[]; galaxies: Galaxy[] }>;
+  analyzeToGraph(text: string): EmotionGraphResult;
 }
 
 function toDomainFromLocal(heuristic: ReturnType<typeof localHeuristic>): Emotion {
@@ -61,7 +62,46 @@ const LocalEmotionService: EmotionService = {
     const { emotions, links } = await this.analyzeMulti(text);
     const rules = config.ENABLE_ENERGY_LINKS ? EnergyRules : [];
     const ruleLinks = new RuleEngine({ id: 'energies', rules }).apply(emotions);
-    const merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
+    let merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
+    // Re-balance: if there are links but none are cross-cluster, synthesize 1–2 cross-cluster links
+    if (merged.length > 0) {
+  const byId = new Map(emotions.map((e) => [e.id, e] as const));
+      const cross = merged.filter((l) => {
+        const a = byId.get(l.source);
+        const b = byId.get(l.target);
+        if (!a || !b) return false;
+        const ka = clusterKeyForLabel(a.label);
+        const kb = clusterKeyForLabel(b.label);
+        return !!ka && !!kb && ka !== kb;
+      }).length;
+      if (cross === 0 && emotions.length > 1) {
+        const scoreOf = (e: Emotion): number => {
+          if (typeof e.intensity === 'number') return e.intensity;
+          const ms = (e.meta as { score?: number } | undefined)?.score;
+          return typeof ms === 'number' ? ms : 0.5;
+        };
+        const sorted = [...emotions].sort((a, b) => scoreOf(b) - scoreOf(a));
+        let added = false;
+        for (let i = 0; i < Math.min(3, sorted.length) && !added; i++) {
+          for (let j = i + 1; j < Math.min(4, sorted.length); j++) {
+            const a = sorted[i];
+            const b = sorted[j];
+            const ka = clusterKeyForLabel(a.label);
+            const kb = clusterKeyForLabel(b.label);
+            if (!ka || !kb || ka === kb) continue;
+            merged.push({
+              id: `rebalance|${a.id}->${b.id}`,
+              source: a.id,
+              target: b.id,
+              kind: 'semantic',
+              weight: Math.min(0.85, 0.38 + ((a.intensity ?? 0.6) + (b.intensity ?? 0.6)) * 0.28)
+            });
+            added = true;
+            break;
+          }
+        }
+      }
+    }
     // Prefer primary emotion galaxies (love/joy/fear/...) over coarse valence buckets
     const galaxies = clusterByPrimaries(emotions);
     return { emotions, links: merged, galaxies };

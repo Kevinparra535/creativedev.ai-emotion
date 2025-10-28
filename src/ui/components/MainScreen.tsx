@@ -46,11 +46,13 @@ const MainScreen = () => {
   useAudioLeva();
 
   // Leva: emotion visuals + transparency monitors
-  const { style, intensity, speed, noise: _noise, grain } = useEmotionLeva(
-    emotion ?? null,
-    thinking,
-    analyzing
-  );
+  const {
+    style: _style,
+    intensity: _intensity,
+    speed: _speed,
+    noise: _noise,
+    grain: _grain
+  } = useEmotionLeva(emotion ?? null, thinking, analyzing);
 
   useEffect(() => {
     setCurrentEmotion(emotion ?? null);
@@ -62,6 +64,7 @@ const MainScreen = () => {
       setThinking(false);
       return;
     }
+
     let cancelled = false;
     const timer = globalThis.setTimeout(async () => {
       try {
@@ -75,21 +78,12 @@ const MainScreen = () => {
         if (!cancelled) setThinking(false);
       }
     }, 450);
+
     return () => {
       cancelled = true;
       globalThis.clearTimeout(timer);
     };
   }, [text, setUniverseData, setThinking]);
-
-  const expandInput = useCallback(() => {
-    if (!inputRef.current) return;
-    void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
-  }, [inputControls, shiftY]);
-
-  const reduceInput = useCallback(() => {
-    if (!inputRef.current) return;
-    void inputControls.start({ y: 0 }, { duration: 0.3, ease: 'easeInOut' });
-  }, [inputControls]);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -100,13 +94,6 @@ const MainScreen = () => {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-
-  // Measure input size on mount and on resize
-  useEffect(() => {
-    if (text.length >= config.INPUT_SHIFT_THRESHOLD) expandInput();
-    else reduceInput();
-    // re-run when shiftY changes so position stays consistent across resizes
-  }, [text, shiftY, expandInput, reduceInput]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -173,14 +160,14 @@ const MainScreen = () => {
   return (
     <MainRoot>
       {/* DOM visualizer background driven by current emotion and Leva controls */}
-      <Vizualizer
+      {/* <Vizualizer
         emotion={emotion}
         analyzing={thinking || analyzing}
         intensity={intensity}
         speed={speed}
         grain={grain}
         styleName={style}
-      />
+      /> */}
       {/* animated background shape */}
       {showShape && <AnimShape aria-hidden='true' animate={controls} />}
 

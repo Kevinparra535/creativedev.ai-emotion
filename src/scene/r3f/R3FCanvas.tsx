@@ -56,7 +56,7 @@ const R3FCanvas = () => {
 
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraControls maxDistance={100} />
-        <CameraShake intensity={0.2} />
+        {/* <CameraShake intensity={0.2} /> */}
 
         <PostFX />
 
@@ -211,13 +211,13 @@ function PostFX() {
   }
   const wantChroma = post.chromaEnabled || style === 'Cyber' || style === 'Glitch';
   if (wantChroma) {
-    const base = style === 'Glitch' ? Math.max(0.0035, post.chromaOffset) : style === 'Cyber' ? Math.max(0.002, post.chromaOffset) : post.chromaOffset;
-    children.push(
-      <ChromaticAberration
-        key='chroma'
-        offset={new Vector2(base, -base)}
-      />
-    );
+    const base =
+      style === 'Glitch'
+        ? Math.max(0.0035, post.chromaOffset)
+        : style === 'Cyber'
+          ? Math.max(0.002, post.chromaOffset)
+          : post.chromaOffset;
+    children.push(<ChromaticAberration key='chroma' offset={new Vector2(base, -base)} />);
   }
   return <EffectComposer>{children}</EffectComposer>;
 }

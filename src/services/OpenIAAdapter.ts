@@ -2,6 +2,7 @@ import config from '@/config/config';
 import type { Emotion } from '@/domain/emotion';
 import type { Link } from '@/domain/link';
 import { GraphBuilder } from '@/systems/GraphBuilder';
+import { clusterKeyForLabel } from '@/config/emotion-clusters';
 import { RuleEngine } from '@/systems/RuleEngine';
 import { mapAIToDomain } from '@/data/mappers';
 import { promptToService, promptToUser, tryParseEmotion, tryParseMulti } from '@/utils/iaUtiils';
@@ -119,6 +120,7 @@ export const OpenIAAdapter = {
       };
       return mapAIToDomain(payload);
     }
+
     try {
       const res = await fetch(`${config.OPENAI_BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -137,6 +139,7 @@ export const OpenIAAdapter = {
       const content: string = data.choices?.[0]?.message?.content ?? '';
       // Strict validation first (Zod)
       const validated = tryParseZodPayload(content);
+      console.log('[OpenIAAdapter] analyzeMulti response content:', content);
       if (validated) {
         const payload = {
           nodes: validated.emotions.map((e) => ({
@@ -228,7 +231,77 @@ export const OpenIAAdapter = {
     const { emotions, links } = await this.analyzeMulti(text);
     // Apply rules if needed (empty ruleset placeholder for now)
     const ruleLinks = new RuleEngine({ id: 'base', rules: [] }).apply(emotions);
-    const merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
+  let merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
+  // Fallback: if no links provided by the model, synthesize 1–2 cross-cluster links
+    if (!merged.length && emotions.length > 1) {
+      type MetaMaybeScore = { score?: number };
+      const scoreOf = (e: Emotion): number => {
+        if (typeof e.intensity === 'number') return e.intensity;
+        const m = e.meta as MetaMaybeScore | undefined;
+        const s = typeof m?.score === 'number' ? m.score : undefined;
+        return typeof s === 'number' ? s : 0.5;
+      };
+
+      const sorted = [...emotions].sort((a, b) => scoreOf(b) - scoreOf(a));
+      // try top 3 emotions to find cross-cluster combinations
+      for (let i = 0; i < Math.min(3, sorted.length); i++) {
+        for (let j = i + 1; j < Math.min(4, sorted.length); j++) {
+          const a = sorted[i];
+          const b = sorted[j];
+          const ka = clusterKeyForLabel(a.label);
+          const kb = clusterKeyForLabel(b.label);
+          if (!ka || !kb || ka === kb) continue;
+          merged.push({
+            id: `inf|${a.id}->${b.id}`,
+            source: a.id,
+            target: b.id,
+            kind: 'semantic',
+            weight: Math.min(0.9, 0.4 + ((a.intensity ?? 0.6) + (b.intensity ?? 0.6)) * 0.3)
+          });
+        }
+        if (merged.length > 0) break;
+      }
+    }
+    // Re-balance: links exist but none are cross-cluster → synthesize one
+    if (merged.length > 0) {
+      const byId = new Map(emotions.map((e) => [e.id, e] as const));
+      const cross = merged.filter((l) => {
+        const a = byId.get(l.source);
+        const b = byId.get(l.target);
+        if (!a || !b) return false;
+        const ka = clusterKeyForLabel(a.label);
+        const kb = clusterKeyForLabel(b.label);
+        return !!ka && !!kb && ka !== kb;
+      }).length;
+      if (cross === 0 && emotions.length > 1) {
+        type MetaMaybeScore = { score?: number };
+        const scoreOf = (e: Emotion): number => {
+          if (typeof e.intensity === 'number') return e.intensity;
+          const m = e.meta as MetaMaybeScore | undefined;
+          return typeof m?.score === 'number' ? m.score : 0.5;
+        };
+        const sorted = [...emotions].sort((a, b) => scoreOf(b) - scoreOf(a));
+        let added = false;
+        for (let i = 0; i < Math.min(3, sorted.length) && !added; i++) {
+          for (let j = i + 1; j < Math.min(4, sorted.length); j++) {
+            const a = sorted[i];
+            const b = sorted[j];
+            const ka = clusterKeyForLabel(a.label);
+            const kb = clusterKeyForLabel(b.label);
+            if (!ka || !kb || ka === kb) continue;
+            merged.push({
+              id: `rebalance|${a.id}->${b.id}`,
+              source: a.id,
+              target: b.id,
+              kind: 'semantic',
+              weight: Math.min(0.85, 0.38 + ((a.intensity ?? 0.6) + (b.intensity ?? 0.6)) * 0.28)
+            });
+            added = true;
+            break;
+          }
+        }
+      }
+    }
     const galaxies = GraphBuilder.clusterByValence(emotions);
     return { emotions, links: merged, galaxies };
   }

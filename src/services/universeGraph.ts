@@ -148,8 +148,9 @@ export async function analyzeTextToGraph(text: string): Promise<UniverseGraph> {
 async function analyzeTextMulti(s: string): Promise<MultiEmotionResult | null> {
   // Use the adapter single analyze and expand to a multi as a simple implementation
   try {
-    const emo = await emotionService.analyze(s);
-    return expandFromDominant(emo);
+    const dominant = await emotionService.analyze(s);
+    if (!dominant) return null;
+    return expandFromDominant(dominant);
   } catch {
     return null;
   }

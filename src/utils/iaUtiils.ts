@@ -51,6 +51,10 @@ export const promptToService = (): { role: string; content: string } => {
       'Reglas:',
       '- Devuelve hasta 8 emociones ya ordenadas por weight DESC.',
       "- Todas las etiquetas de 'pairs' DEBEN existir en 'emotions.label'.",
+      "- Si hay 2+ emociones, incluye AL MENOS 2 pares en 'pairs' y PRIORIZA pares entre clusters PRIMARIOS distintos",
+      '  (love, joy, calm, anger, fear, sadness, surprise, nostalgia) o sus sinónimos (gratitude→joy, loneliness→sadness, etc).',
+      '- Evita pares redundantes dentro del mismo cluster a menos que sea una relación muy fuerte.',
+      "- Para cada emoción, rellena 'relations' con 2–5 labels (existentes o sinónimos) que ayuden a inferir conexiones.",
       '- Usa punto decimal; no uses NaN/Infinity ni null si puedes evitarlo.',
       '- Rango estricto: valence [-1,1], arousal [0,1], intensity [0,1], weight [0,1].',
       '- Si una emoción es implícita, inclúyela con weight bajo (p.ej. 0.15–0.35).',
@@ -68,6 +72,8 @@ export const promptToUser = (text: string) => {
       '- Identifica hasta 8 emociones (ordenadas por weight).',
       '- Si hay señales contextuales (p. ej. recuerdo → nostalgia), puedes incluir emociones implícitas con weight bajo.',
       "- En 'pairs', coloca co-ocurrencias/relaciones semánticas fuertes SOLO entre labels presentes en 'emotions'.",
+      '- Si detectas más de una emoción relevante, incluye al menos 2 pares entre clusters distintos (love, joy, calm, anger, fear, sadness, surprise, nostalgia)',
+      '  o sinónimos claros presentes en el texto (gratitude→joy, loneliness→sadness, serenity→calm, curiosity→surprise/joy).',
       '',
       `Texto: ${text}`
     ].join('\n')
@@ -164,9 +170,7 @@ export function tryParseMulti(s: string): MultiEmotionResult | null {
             : undefined,
         intensity: typeof e.intensity === 'number' ? e.intensity : undefined,
         relations:
-          e && typeof e === 'object'
-            ? extractRelations(e as Record<string, unknown>)
-            : undefined
+          e && typeof e === 'object' ? extractRelations(e as Record<string, unknown>) : undefined
       }))
       .filter((e) => e.label && e.weight > 0) as MultiEmotionItem[];
 

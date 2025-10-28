@@ -38,7 +38,15 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     colors: ['#F06292', '#F48FB1'],
     radius: 2.8,
     center: [4.8, 1.8, 0.3],
-    synonyms: ['affection', 'cariño', 'caring', 'compassion']
+    synonyms: [
+      'affection',
+      'cariño',
+      'caring',
+      'compassion',
+      'empathy',
+      'hope',
+      'esperanza'
+    ]
   },
   joy: {
     key: 'joy',
@@ -48,7 +56,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     colors: ['#FFD54F', '#FFF176'],
     radius: 2.6,
     center: [5.8, 2.6, -0.2],
-    synonyms: ['happiness', 'alegría', 'delight', 'pleasure', 'gratitude']
+    synonyms: ['happiness', 'alegría', 'delight', 'pleasure', 'gratitude', 'pride', 'orgullo']
   },
   calm: {
     key: 'calm',
@@ -58,7 +66,16 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     colors: ['#81C784', '#A5D6A7'],
     radius: 2.5,
     center: [2.8, -2.2, 0.2],
-    synonyms: ['serenity', 'tranquility', 'trust', 'peace']
+    synonyms: [
+      'serenity',
+      'tranquility',
+      'trust',
+      'peace',
+      'confidence',
+      'confianza',
+      'acceptance',
+      'aceptación'
+    ]
   },
   sadness: {
     key: 'sadness',
@@ -68,7 +85,19 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     colors: ['#64B5F6', '#2196F3'],
     radius: 2.7,
     center: [-4.2, -1.6, -0.3],
-    synonyms: ['grief', 'melancholy', 'loneliness', 'pena', 'decepción']
+    synonyms: [
+      'grief',
+      'melancholy',
+      'loneliness',
+      'pena',
+      'decepción',
+      'despair',
+      'desesperación',
+      'guilt',
+      'culpa',
+      'shame',
+      'vergüenza'
+    ]
   },
   fear: {
     key: 'fear',
@@ -78,7 +107,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     colors: ['#4FC3F7', '#0288D1'],
     radius: 2.9,
     center: [-5.8, 2.8, 0.4],
-    synonyms: ['anxiety', 'worry', 'insecurity', 'panic']
+    synonyms: ['anxiety', 'worry', 'insecurity', 'panic', 'nervousness', 'inquietud']
   },
   anger: {
     key: 'anger',
@@ -88,7 +117,7 @@ const CLUSTERS: Record<ClusterKey, ClusterDef> = {
     colors: ['#D7263D', '#8B0000'],
     radius: 2.9,
     center: [-5, 1.2, -0.2],
-    synonyms: ['frustration', 'rage', 'resentment', 'irritation']
+    synonyms: ['frustration', 'rage', 'resentment', 'irritation', 'hate', 'odio']
   },
   surprise: {
     key: 'surprise',
@@ -137,12 +166,32 @@ const LABEL_TO_CLUSTER: Record<string, ClusterKey> = (() => {
   map['miedo'] = 'fear';
   map['enojo'] = 'anger';
   map['sorpresa'] = 'surprise';
+  map['gratitude'] = 'joy';
+  map['loneliness'] = 'sadness';
+  map['serenity'] = 'calm';
+  map['curiosity'] = 'surprise';
+  map['hope'] = 'love';
+  map['esperanza'] = 'love';
+  map['despair'] = 'sadness';
+  map['desesperación'] = 'sadness';
+  map['guilt'] = 'sadness';
+  map['culpa'] = 'sadness';
+  map['shame'] = 'sadness';
+  map['vergüenza'] = 'sadness';
+  map['confidence'] = 'calm';
+  map['confianza'] = 'calm';
+  map['empathy'] = 'love';
+  map['empatía'] = 'love';
+  map['pride'] = 'joy';
+  map['orgullo'] = 'joy';
+  map['hate'] = 'anger';
+  map['odio'] = 'anger';
   return map;
 })();
 
 export function clusterKeyForLabel(label: string): ClusterKey | null {
   const k = LABEL_TO_CLUSTER[label.trim().toLowerCase()];
-  return (k as ClusterKey) ?? null;
+  return k ?? null;
 }
 
 // Map a primary cluster to a domain Emotion shape, so rendering/systems can treat primaries uniformly
