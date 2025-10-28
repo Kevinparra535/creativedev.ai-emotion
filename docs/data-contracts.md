@@ -1,27 +1,27 @@
-# Contratos de datos (IA ↔ dominio)
+# Data contracts (AI ↔ domain)
 
-Este documento describe el payload esperado desde el motor de IA (o heurística local) y cómo se mapea al dominio que consume la escena R3F `ClustersScene`.
+This document describes the payload expected from the AI engine (or local heuristic) and how it maps to the domain consumed by the R3F `ClustersScene`.
 
-## Resumen
+## Summary
 
-- Input IA (payload multi): `version`, `emotions[]`, `pairs[]`, `global?`.
-- Cada emoción puede incluir: `id` (estable), `label`, `valence`, `arousal`, `intensity`, `weight|score`, `colors`, `relations`.
-- `pairs` define enlaces explícitos entre `label`s presentes en `emotions`.
-- `relations` define enlaces implícitos desde una emoción hacia otras por `label`.
-- El mapper (`src/data/mappers.ts`) normaliza y construye `{ emotions: Emotion[]; links: Link[] }`.
+- Multi payload input: `version`, `emotions[]`, `pairs[]`, `global?`.
+- Each emotion may include: `id` (stable), `label`, `valence`, `arousal`, `intensity`, `weight|score`, `colors`, `relations`.
+- `pairs` defines explicit links between emotion `label`s present in `emotions`.
+- `relations` defines implicit links from one emotion to others by `label`.
+- The mapper (`src/data/mappers.ts`) normalizes and builds `{ emotions: Emotion[]; links: Link[] }`.
 
-## Esquema de entrada (TypeScript)
+## Input schema (TypeScript)
 
 ```ts
 export interface AIEmotionNode {
-  id?: string;              // opcional: id estable del backend
-  label: string;            // "joy" | "fear" | ... (minúsculas consistente con clusters)
-  score?: number;           // confianza/peso [0..1]
+  id?: string;              // optional: stable id from backend
+  label: string;            // "joy" | "fear" | ... (lowercase, consistent with clusters)
+  score?: number;           // confidence/weight [0..1]
   valence?: number;         // [-1..1]
   arousal?: number;         // [0..1]
-  colors?: string[];        // paleta sugerida (usamos colors[0] como colorHex)
-  intensity?: number;       // [0..1] (pulso visual)
-  relations?: string[];     // labels a conectar implícitamente
+  colors?: string[];        // suggested palette (we use colors[0] as colorHex)
+  intensity?: number;       // [0..1] (visual pulse)
+  relations?: string[];     // labels to connect implicitly
 }
 
 export interface AIEmotionPayload {
@@ -30,7 +30,7 @@ export interface AIEmotionPayload {
 }
 ```
 
-Validación estricta (Zod) usada en modo online:
+Strict validation (Zod) used in online mode:
 
 ```ts
 const EmotionZ = z.object({
@@ -45,7 +45,7 @@ const EmotionZ = z.object({
 });
 ```
 
-## Ejemplo de payload
+## Example payload
 
 ```json
 {
@@ -76,32 +76,32 @@ const EmotionZ = z.object({
 }
 ```
 
-## Mapeo a dominio
+## Mapping to domain
 
-- `src/data/mappers.ts` genera:
-  - `Emotion[]` con:
+- `src/data/mappers.ts` produces:
+  - `Emotion[]` with:
     - `id = node.id || '${label}-${i}'`
-    - `label`, `valence` (clamp a [-1,1] sólo si viene fuera de rango), `arousal` [0,1]
-    - `intensity` (o `score` como fallback)
+    - `label`, `valence` (clamped to [-1,1] only if out of range), `arousal` [0,1]
+    - `intensity` (or `score` as fallback)
     - `colorHex = colors?.[0]`
     - `meta`: `{ score, colors, relations }`
-  - `Link[]` con:
-    - Explícitos: de `edges`/`pairs`
-    - Implícitos: desde cada emoción a sus `meta.relations[]` si existe emoción destino
+  - `Link[]` with:
+    - Explicit: from `edges`/`pairs`
+    - Implicit: from each emotion to its `meta.relations[]` if destination emotion exists
 
-## Consumo en ClustersScene
+## Consumption in ClustersScene
 
-- Satélites: 1 emoción = 1 satélite en el cluster correspondiente; pulso = `intensity`; color = `colorHex` o paleta del cluster.
-- Planeta del cluster: color tiende hacia la emoción dominante del cluster; pulso global por peso agregado.
-- Enlaces:
-  - Por defecto entre primarias (energía): visibles solo cuando `!thinking` y no hay `links` del backend.
-  - Corrientes efímeras por `links` (pairs/relations): visibles cuando `links.length > 0`.
-  - Re-balance (cliente): si hay `links` pero ninguno cruza clusters, el cliente sintetiza 1–2 enlaces cruzados entre emociones con mayor `intensity`/`score` para mantener continuidad visual.
+- Satellites: 1 emotion = 1 satellite in the corresponding cluster; pulse = `intensity`; color = `colorHex` or cluster palette.
+- Cluster planet: color tilts toward the cluster's dominant emotion; global pulse by aggregated weight.
+- Links:
+  - Default links between primaries (energy): visible only when `!thinking` and there are no backend `links`.
+  - Ephemeral currents from `links` (pairs/relations): visible when `links.length > 0`.
+  - Re-balance (client): if links do not cross clusters, the client synthesizes 1–2 cross-cluster links between strongest emotions to maintain visual continuity.
 
-## Recomendaciones de backend
+## Backend guidance
 
-- Enviar `id` estable por emoción para minimizar re-montajes en animaciones.
-- Mantener `label` consistente con `config/emotion-clusters`.
-- Proveer `relations` siempre que tenga sentido; cuando no haya `pairs`, aún obtendrás conexiones implícitas.
-- `valence` y `arousal` ya normalizados en su rango; el cliente no re-escala si están dentro del rango.
-- Si tu modelo no devuelve `pairs`, considera incluir `relations` por emoción; de lo contrario, el cliente aplicará re-balance opcional para generar enlaces cruzados mínimos.
+- Provide a stable `id` per emotion to minimize remounts in animations.
+- Keep `label` consistent with `config/emotion-clusters`.
+- Provide `relations` when it makes sense; without `pairs` you still get implicit connections.
+- `valence` and `arousal` should be normalized; the client doesn't rescale if they are in range.
+- If your model doesn't return `pairs`, include `relations` per emotion; otherwise the client will optionally synthesize minimal cross-links.

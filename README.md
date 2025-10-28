@@ -1,6 +1,6 @@
-# CreativeDev: Emotion Universe [Live demo](https://labs-ai-emotion.web.app/)
-
 !["Emotion Universe cover"](docs/readme_cover.png)
+
+# CreativeDev: Emotion Universe [Live demo](https://labs-ai-emotion.web.app/)
 
 ![R3F](https://img.shields.io/badge/R3F-React%20Three%20Fiber-black)
 ![WebGL2](https://img.shields.io/badge/WebGL2-FBO-blue)
@@ -22,7 +22,7 @@ This README keeps only the essentials; extended content lives in [docs/](docs/RE
 - Build: `npm run build`
 - Preview: `npm run preview`
 
-Note: Use import.meta.env with VITE_* keys; do not expose the full process.env.
+Note: Use import.meta.env with VITE\_\* keys; do not expose the full process.env.
 
 ## Documentation
 

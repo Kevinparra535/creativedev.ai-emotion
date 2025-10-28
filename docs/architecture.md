@@ -1,28 +1,23 @@
-# Arquitectura de creativedev.ai-emotion (v2)
+# Architecture (v2)
 
-La app convierte texto en visuales reactivos (DOM y WebGL) en función de emociones detectadas en tiempo real. La capa de servicios permite alternar entre modo offline (heurística local) y online (API) con un solo toggle, y unifica el pipeline para DOM y R3F.
+The app converts text into reactive visuals (DOM and WebGL) based on real-time detected emotions. The service layer allows switching between offline (local heuristic) and online (API) with a single toggle and unifies the pipeline for both DOM and R3F.
 
-## Stack principal
+## Core stack
 
 - React 19 + TypeScript + Vite (SWC)
-- Render dual: DOM (Framer Motion + styled-components) y WebGL con R3F/Drei/Postprocessing
-- Estado: Zustand (UI stores en `src/stores/*`, dominio en `src/state/*`); Controles: Leva
-- Lint/Format: ESLint flat config + Prettier
+- Dual render: DOM (Framer Motion + styled-components) and WebGL with R3F/Drei/Postprocessing
+- State: Zustand (UI in `src/stores/*`, domain in `src/state/*`); Controls: Leva
+- Lint/Format: ESLint (flat) + Prettier
 
-## Flujo de extremo a extremo
+## End-to-end flow
 
-1. Usuario escribe en el input (`features/prompt/PromptInput.tsx`).
-
-2. Análisis unificado: `useEmotionCoordinator` (debounce + cancel) invoca `emotionService.analyzeToGraph(text)` una sola vez y deriva:
-
-- `emotion` primaria (por `intensity` o `meta.score`)
-- `{ emotions, links, galaxies }` para la escena R3F
-
-3) El componente sincroniza stores: `useEmotionStore.setCurrent(emotion)` y `useUniverse.setData({ emotions, links, galaxies })`, además de `useUIStore.setThinking(analyzing)`.
-
-4) DOM: `Vizualizer` aplica `emotion-presets`.
-
-5) WebGL: `ClustersScene` renderiza planetas/satélites/enlaces y el Planeta Blend.
+1) User types in `features/prompt/PromptInput.tsx`.
+2) Unified analysis: `useEmotionCoordinator` (debounce + cancel) calls `emotionService.analyzeToGraph(text)` once and derives:
+   - Primary `emotion` (by `intensity` or `meta.score`)
+   - `{ emotions, links, galaxies }` for the R3F scene
+3) The component syncs stores: `useEmotionStore.setCurrent(emotion)` and `useUniverse.setData({ emotions, links, galaxies })`, and sets `useUIStore.setThinking(analyzing)`.
+4) DOM: `Vizualizer` applies `emotion-presets`.
+5) WebGL: `ClustersScene` renders planets/satellites/links and the Blend Planet.
 
 ```mermaid
 flowchart LR
@@ -31,54 +26,54 @@ flowchart LR
   B -- {emotions,links,galaxies} --> E[ClustersScene/UniverseScene (R3F)]
 ```
 
-## Modo de análisis (factory)
+## Analysis modes (factory)
 
-- Toggle: `VITE_EMOTION_MODE = online | offline | auto` (por defecto: auto)
-- Factory: `EmotionServiceFactory` expone `emotionService`:
-  - online: usa `OpenIAAdapter` (API + Zod validation + fallback permisivo)
-  - offline: usa `local-emotions` (`buildPayloadFromText`/`localHeuristic`)
-  - auto: online si hay `VITE_OPENAI_API_KEY`, si no offline
+- Toggle: `VITE_EMOTION_MODE = online | offline | auto` (default: auto)
+- Factory: `EmotionServiceFactory` exposes `emotionService`:
+  - online: `OpenIAAdapter` (API + Zod validation + permissive fallback)
+  - offline: `local-emotions` (`buildPayloadFromText`/`localHeuristic`)
+  - auto: online if `VITE_OPENAI_API_KEY` present, otherwise offline
 
-## Módulos clave
+## Key modules
 
 - `src/services/EmotionServiceFactory.ts`
-  - Contrato común: `analyze`, `analyzeMulti`, `analyzeToGraph`
-  - Concatena reglas (`RuleEngine`) y clustering (`ClusterEngine`) para el universo.
+  - Common contract: `analyze`, `analyzeMulti`, `analyzeToGraph`
+  - Chains rules (`RuleEngine`) and clustering (`ClusterEngine`) for the universe.
 
 - `src/services/OpenIAAdapter.ts`
-  - Chat completions → texto → JSON
-  - Primero valida con `PayloadZ` (Zod); si falla, parser permisivo (`tryParseMulti`), y último fallback heurístico.
-  - `mapAIToDomain` transforma a `Emotion[]`/`Link[]`.
+  - Chat completions → text → JSON
+  - Validates with Zod (`PayloadZ`); on failure, permissive parser (`tryParseMulti`), then heuristic fallback.
+  - `mapAIToDomain` transforms to `Emotion[]`/`Link[]`.
 
 - `src/ai/local-emotions.ts`
-  - `localHeuristic(text)` → emoción dominante normalizada
-  - `expandFromDominant` y `buildPayloadFromText` → payload multi (emotions + pairs + global)
+  - `localHeuristic(text)` → normalized dominant emotion
+  - `expandFromDominant` and `buildPayloadFromText` → multi payload (emotions + pairs + global)
 
 - `src/services/universeGraph.ts`
-  - Crea un grafo por frases: acumula pesos, valence/arousal, co-ocurrencias y pares semánticos.
-  - Fallbacks de afecto centralizados vía `AFFECT_DEFAULTS` (ClusterEngine).
+  - Builds a graph per phrases: accumulates weights, valence/arousal, co-occurrences and semantic pairs.
+  - Affect defaults via `AFFECT_DEFAULTS` (ClusterEngine).
 
 - `src/systems/ClusterEngine.ts`
-  - Centraliza defaults de afecto (valence, arousal, palette) y sinónimos desde `config/emotion-clusters`.
-  - `clusterByPrimaries` genera galaxias reales (love/joy/fear/…)
+  - Centralizes affect defaults (valence, arousal, palette) and synonyms from `config/emotion-clusters`.
+  - `clusterByPrimaries` creates actual galaxies (love/joy/fear/…)
 
-- `src/systems/GraphBuilder.ts` y `src/systems/RuleEngine.ts`
-  - Merge de links, clustering auxiliar y reglas (ej. polaridad, transiciones).
+- `src/systems/GraphBuilder.ts` and `src/systems/RuleEngine.ts`
+  - Merges links, helper clustering, and rules (polarity, transitions).
 
-### Rendering R3F (galaxias, primarias y Planeta Blend)
+### R3F rendering (galaxies, primaries, Blend Planet)
 
-- `R3FCanvas.tsx`: canvas único con luces, CameraControls, postprocesado (Bloom, Noise, Vignette, Chroma) y DPR adaptativo; controles en `useVisualLeva` (sólo PostFX; Nebula fue retirada).
-- `ClustersScene.tsx`: planetas primarios + satélites; órbitas elípticas; enlaces energéticos con degradado y "neuron pulses"; intro animada por etapas; Planeta Blend de primarias en el centroide de clusters activos.
-- Objetos: `objects/Planets.tsx`, `objects/Orbits.tsx`; utilidades en `scene/r3f/utils/*`.
-- `UniverseScene.tsx`: alternativa para grafo completo (nodos/enlaces) cuando se visualiza el universo.
-- Utils de escena: `makeOrbitPoints`, `makeArcPoints`, `gradientColors`, `relaxMainPositions`, `computePrimaryEnergyLinks`.
-- Audio: `AudioManager.ts` (ambient + hover SFX), controles vía Leva.
-- Texturas PBR: `objects/Planets.tsx` + `utils/planetTextures.ts` aplican un pack a un planeta configurable con AO/normal/roughness/metalness/opcional displacement.
+- `R3FCanvas.tsx`: single canvas with lights, CameraControls, postprocessing (Bloom, Noise, Vignette, Chroma) and adaptive DPR; controls in `useVisualLeva` (PostFX only; Nebula removed).
+- `ClustersScene.tsx`: primary planets + satellites; elliptical orbits; energy links with gradients and "neuron pulses"; staged intro; Blend Planet at the centroid of active clusters.
+- Objects: `objects/Planets.tsx`, `objects/Orbits.tsx`; utilities under `scene/r3f/utils/*`.
+- `UniverseScene.tsx`: alternative for the full graph (nodes/links) when exploring the universe.
+- Scene utils: `makeOrbitPoints`, `makeArcPoints`, `gradientColors`, `relaxMainPositions`, `computePrimaryEnergyLinks`.
+- Audio: `AudioManager.ts` (ambient + hover SFX), with Leva controls.
+- PBR textures: `objects/Planets.tsx` + `utils/planetTextures.ts` apply a pack to a configurable planet with AO/normal/roughness/metalness/optional displacement.
 
-#### Planeta Blend + Emotion Visuals 2.0
+#### Blend Planet + Emotion Visuals 2.0
 
-- `PrimaryBlendPlanet` (en `objects/Planets.tsx`) combina hasta 12 colores de emociones activas.
-- Controles en Leva (hook `useEmotionVisuals2.ts`):
+- `PrimaryBlendPlanet` (in `objects/Planets.tsx`) combines up to 12 colors of active emotions.
+- Leva controls (hook `useEmotionVisuals2.ts`):
   - effect: `Watercolor | Oil | Link | Holographic | Voronoi`
   - Watercolor: `wcWash`, `wcScale`, `wcSharpness`, `wcFlow`
   - Oil: `oilSwirl`, `oilScale`, `oilFlow`, `oilShine`, `oilContrast`
@@ -86,79 +81,79 @@ flowchart LR
   - Holographic: `holoIntensity`, `holoFresnel`, `holoDensity`, `holoThickness`, `holoSpeed`
   - Voronoi: `voroScale`, `voroSoft`, `voroFlow`, `voroJitter`, `voroEdge`, `voroContrast`
   - Global: `spinSpeed`, `bounce`
-- Calidad del Planeta Blend (hook `useBlendLeva.ts`): `quality` → `segments`/`sharpness`.
-- Nebula: eliminada. PostFX se controla desde `useVisualLeva`.
+- Blend quality (hook `useBlendLeva.ts`): `quality` → `segments`/`sharpness`.
+- Nebula: removed. PostFX is controlled via `useVisualLeva`.
 
-## Contratos (dominio)
+## Domain contracts
 
 - Emotion: `{ id, label, valence, arousal, intensity?, colorHex?, meta? }`
 - Link: `{ id, source, target, weight, kind }`
 - Galaxy: `{ id, name, members[], centroid?, radius?, colorHex? }`
 
-Payload (multi) compatible con IA/local:
+Multi payload compatible with AI/local:
 
 - `MultiEmotionResult`: `{ version: 1, emotions[], global, pairs[] }`
-- Emoción puede incluir `id` (estable), `relations` (array de labels) y `colors` (paleta). El mapper creará links implícitos desde `relations` cuando existan emociones destino.
+- An emotion can include `id` (stable), `relations` (labels) and `colors` (palette). The mapper creates implicit links from `relations` when destination emotions exist.
 
-## Configuración
+## Configuration
 
 - `VITE_EMOTION_MODE`: online | offline | auto
 - OpenAI: `VITE_OPENAI_API_KEY`, `VITE_OPENAI_BASE_URL?`, `VITE_OPENAI_MODEL?`
-- Config de visuales/audio/texturas en `src/config/config.ts` (AUDIO, TEXTURES, tiempos de intro, flags de energía).
-- Ver `env_template` para ejemplo. Para audio y texturas, ajustar `src/config/config.ts` (no variables de entorno).
+- Visuals/audio/textures in `src/config/config.ts` (AUDIO, TEXTURES, intro timings, energy flags).
+- See `env_template` for an example. For audio and textures, adjust `src/config/config.ts` (not environment variables).
 
-## Performance y UX
+## Performance and UX
 
-- DOM: animar transform/opacity y declarar `will-change`.
-- WebGL: limitación de DPR según dispositivo; postprocesado ligero; geometrías con segmentos razonables; AO requiere `uv2` (duplicado en run-time para esfera PBR).
-- Debounce (350–450ms) y cancelación para interacción fluida.
+- DOM: animate transform/opacity and declare `will-change`.
+- WebGL: cap DPR per device; light postprocessing; reasonable geometry segments; AO requires `uv2` (duplicated at runtime for the PBR sphere).
+- Debounce (350–450ms) and cancellation for responsive interaction.
 
-## Cómo ejecutar
+## Run
 
 ```powershell
-npm run dev     # desarrollo con HMR
-npm run build   # compila TS + build Vite
-npm run preview # sirve la build
+npm run dev     # development with HMR
+npm run build   # TypeScript + Vite build
+npm run preview # serve the build
 ```
 
-## Extender/ajustar
+## Extend/tune
 
-- Agregar emoción/sinónimo: actualizar `config/emotion-clusters` y, si hace falta, `emotion-presets`.
-- Cambiar layout de galaxias: extender `ClusterEngine` o añadir layout en sistemas.
-- Reglas de enlaces: añadir reglas a `RuleEngine`.
+- Add emotion/synonym: update `config/emotion-clusters` and optionally `emotion-presets`.
+- Change galaxy layout: extend `ClusterEngine` or add a layout in systems.
+- Link rules: add rules in `RuleEngine`.
 
-### Visuales R3F adicionales
+### Additional R3F visuals
 
-- Enlaces energéticos entre primarias: `computePrimaryEnergyLinks` y render en `ClustersScene` usando `@react-three/drei/Line` con `vertexColors` degradados.
-- Pulsos (neuronas) viajando por bezier: `EnergyPulse` en `ClustersScene` con `useFrame` para animación.
-- Intro escalonada: timeline en `useFrame` que destapa planetas → satélites → órbitas → enlaces.
+- Energy links between primaries: `computePrimaryEnergyLinks` rendered in `ClustersScene` via `@react-three/drei/Line` with gradient `vertexColors`.
+- Pulses traveling along bezier: `EnergyPulse` in `ClustersScene` with `useFrame`.
+- Staged intro: timeline in `useFrame` revealing planets → satellites → orbits → links.
 
 ### Audio
 
-- `AudioManager` centraliza contexto y volúmenes (master/ambient/sfx) y reanuda tras interacción.
-- `config.AUDIO` define toggles y rutas. Hover SFX por clave de emoción.
+- `AudioManager` centralizes context and volumes (master/ambient/sfx) and resumes on interaction.
+- `config.AUDIO` defines toggles and routes. Hover SFX per emotion.
 
-### Texturas PBR
+### PBR textures
 
-- `config.TEXTURES` elige `PLANET_KEY` y `PACK`. Se pasa como prop a `Planet` para habilitar PBR.
-- `planetTextures.ts` carga mapas y ajusta color space y sampling. `uv2` se asegura en geometría.
+- `config.TEXTURES` chooses `PLANET_KEY` and `PACK`. Passed as a prop to `Planet` to enable PBR.
+- `planetTextures.ts` loads maps and adjusts color space and sampling. `uv2` ensured on geometry.
 
-## Notas
+## Notes
 
-- Preferir `import.meta.env` y claves `VITE_*`.
-- `EmotionServiceFactory` es el único lugar a tocar para cambiar política online/offline.
+- Prefer `import.meta.env` with `VITE_*` keys.
+- `EmotionServiceFactory` is the only place to change online/offline policy.
 
-### Almacenamiento de estado (R3F)
+### State storage (R3F)
 
-- `useUniverse` (`src/state/universe.store.ts`) mantiene `{ emotions, links, galaxies, layout, positions }`.
-- ClustersScene consume `useUniverse.emotions` (satélites por cluster) y `useUniverse.links` (pair currents). El color del planeta toma `colorHex` de la emoción dominante por cluster.
+- `useUniverse` (`src/state/universe.store.ts`) keeps `{ emotions, links, galaxies, layout, positions }`.
+- `ClustersScene` consumes `useUniverse.emotions` (satellites per cluster) and `useUniverse.links` (pair currents). The planet color tilts toward the cluster's dominant emotion.
 
-### Visibilidad de enlaces en ClustersScene
+### Link visibility in ClustersScene
 
-- Enlaces por defecto entre primarias: visibles sólo cuando `!thinking` y `links.length === 0`.
-- Corrientes efímeras (pairs/relations): visibles cuando `links.length > 0`; cada link genera arcos/“pulsos” temporales entre clusters distintos.
+- Default links between primaries: visible only when `!thinking` and `links.length === 0`.
+- Ephemeral currents (pairs/relations): visible when `links.length > 0`; each link creates temporary arcs/“pulses” between different clusters.
 
-### Re-balance de enlaces (cliente)
+### Client-side link re-balance
 
-- Cuando el backend no provee links, o provee sólo intra-cluster, el cliente puede sintetizar 1–2 enlaces cruzados entre las emociones más fuertes para mantener legibilidad visual.
-- Implementado en `EmotionServiceFactory.analyzeToGraph` y `OpenIAAdapter.analyzeToGraph` con comprobación de clusters y pesos.
+- When the backend doesn't cross clusters, the client can synthesize 1–2 cross-cluster links between the strongest emotions for legibility.
+- Implemented in `EmotionServiceFactory.analyzeToGraph` and `OpenIAAdapter.analyzeToGraph` with cluster/weight checks.

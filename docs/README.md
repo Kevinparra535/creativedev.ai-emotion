@@ -1,27 +1,27 @@
-# Documentation index
+# CreativeDev: Emotion Universe — Docs
 
-This folder centralizes all project documentation. The root README is intentionally minimal.
+![Docs cover](readme_cover.png)
 
+This folder hosts the extended documentation for the project. Start here to explore the vision, creative process, PoC, MVP, architecture, styling, and data contracts.
+
+## Table of contents
+
+- Vision: [VISION.md](./VISION.md)
+- Creative process: [CREATIVE_PROCESS.md](./CREATIVE_PROCESS.md)
+- Proof of Concept (PoC): [POC.md](./POC.md)
+- Minimum Viable Product (MVP): [MVP.md](./MVP.md)
 - Architecture: [architecture.md](./architecture.md)
+- Style guide (styled-components): [STYLE_GUIDE.md](./STYLE_GUIDE.md)
+- Styling system and tokens: [STYLING.md](./STYLING.md)
 - Data contracts: [data-contracts.md](./data-contracts.md)
 
-Additional references:
+## References
 
 - Environment template: [`../env_template`](../env_template)
 - Key config: [`src/config/config.ts`](../src/config/config.ts)
-- Dev workflows and gotchas (internal): [`.github/copilot-instructions.md`](../.github/copilot-instructions.md)
-
-## Quick run (reference)
-
-```powershell
-npm i
-npm run dev
-# build & preview
-npm run build
-npm run preview
-```
+- Internal assistants/config: [`.github/copilot-instructions.md`](../.github/copilot-instructions.md)
 
 ## Notes
 
-- Use `import.meta.env` with `VITE_*` keys (avoid using `process.env`).
-- Without an API key the app runs in offline heuristic mode; with `VITE_OPENAI_API_KEY` it switches to online/auto.
+- This project prioritizes a complete, stable path for parity and performance over maintaining multiple effect stacks.
+- Docs are living; we update them as the lab evolves.
