@@ -308,7 +308,13 @@ export function PrimaryBlendPlanet({
   oilScale = 1.4,
   oilFlow = 0.9,
   oilShine = 0.35,
-  oilContrast = 2.2
+  oilContrast = 2.2,
+  // Link effect params
+  linkDensity = 1.2,
+  linkThickness = 0.5,
+  linkNoise = 0.5,
+  linkFlow = 1.0,
+  linkContrast = 2.0
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -326,7 +332,7 @@ export function PrimaryBlendPlanet({
   segments?: number;
   sharpness?: number;
   spinSpeed?: number;
-  effect?: 'Watercolor' | 'Oil';
+  effect?: 'Watercolor' | 'Oil' | 'Link';
   targetMix?: number;
   wcWash?: number;
   wcScale?: number;
@@ -337,6 +343,12 @@ export function PrimaryBlendPlanet({
   oilFlow?: number;
   oilShine?: number;
   oilContrast?: number;
+  // Link effect params
+  linkDensity?: number;
+  linkThickness?: number;
+  linkNoise?: number;
+  linkFlow?: number;
+  linkContrast?: number;
 }>) {
   const [hovered, setHovered] = useState<boolean>(false);
 
@@ -382,7 +394,13 @@ export function PrimaryBlendPlanet({
       uOilScale: { value: oilScale },
       uOilFlow: { value: oilFlow },
       uOilShine: { value: oilShine },
-      uOilContrast: { value: oilContrast }
+      uOilContrast: { value: oilContrast },
+      // Link uniforms
+      uLinkDensity: { value: linkDensity },
+      uLinkThickness: { value: linkThickness },
+      uLinkNoise: { value: linkNoise },
+      uLinkFlow: { value: linkFlow },
+      uLinkContrast: { value: linkContrast }
     } as Record<string, any>;
   }, [
     palette,
@@ -397,7 +415,12 @@ export function PrimaryBlendPlanet({
     oilScale,
     oilFlow,
     oilShine,
-    oilContrast
+    oilContrast,
+    linkDensity,
+    linkThickness,
+    linkNoise,
+    linkFlow,
+    linkContrast
   ]);
 
   // Update colors if palette changes
@@ -420,7 +443,7 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uScale.value = wcScale;
       matRef.current.uniforms.uWash.value = wcWash;
       matRef.current.uniforms.uFlow.value = wcFlow;
-      matRef.current.uniforms.uEffect.value = effect === 'Oil' ? 1 : 0;
+      matRef.current.uniforms.uEffect.value = effect === 'Oil' ? 1 : effect === 'Link' ? 2 : 0;
       // Allow EV2 to override watercolor sharpness in real-time
       matRef.current.uniforms.uSharpness.value =
         wcSharpness ?? matRef.current.uniforms.uSharpness.value;
@@ -430,6 +453,12 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uOilFlow.value = oilFlow;
       matRef.current.uniforms.uOilShine.value = oilShine;
       matRef.current.uniforms.uOilContrast.value = oilContrast;
+      // Update Link uniforms
+      matRef.current.uniforms.uLinkDensity.value = linkDensity;
+      matRef.current.uniforms.uLinkThickness.value = linkThickness;
+      matRef.current.uniforms.uLinkNoise.value = linkNoise;
+      matRef.current.uniforms.uLinkFlow.value = linkFlow;
+      matRef.current.uniforms.uLinkContrast.value = linkContrast;
     }
     // Scale breathing + hover pulse
     if (meshRef.current) {
@@ -509,6 +538,12 @@ export function PrimaryBlendPlanet({
     uniform float uOilFlow;
     uniform float uOilShine;
     uniform float uOilContrast;
+    // Link
+    uniform float uLinkDensity;
+    uniform float uLinkThickness;
+    uniform float uLinkNoise;
+    uniform float uLinkFlow;
+    uniform float uLinkContrast;
 
     // Hash/Noise helpers
     float hash(vec2 p){
@@ -568,7 +603,7 @@ export function PrimaryBlendPlanet({
         }
         col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
         col = mix(col, vec3(dot(col, vec3(0.333))), clamp(uWash, 0.0, 0.5));
-      } else {
+      } else if(uEffect == 1) {
         // Oil marbling
         float t = uTime * 0.18 * max(0.001, uOilFlow) + uSeed;
         vec2 p0 = swirl(baseUV, uOilSwirl, t);
@@ -592,6 +627,26 @@ export function PrimaryBlendPlanet({
         vec3 H = normalize(L + V);
         float spec = pow(max(dot(N, H), 0.0), 16.0 + 64.0*uOilShine);
         col += spec * 0.25;
+      } else {
+        // Link effect: flowing line bands that highlight connections
+        float t = uTime * 0.2 * max(0.001, uLinkFlow) + uSeed;
+        vec2 p = baseUV + vec2(fbm(baseUV*3.1 + t)*0.05*uLinkNoise);
+        vec3 acc = vec3(0.0);
+        float wsum = 0.0;
+        for(int i=0;i<12;i++){
+          if(i>=uCount) break;
+          float angle = float(i) * 0.47;
+          vec2 dir = vec2(cos(angle), sin(angle));
+          float proj = dot(p + vec2(0.11*t, -0.09*t), dir) * uLinkDensity;
+          float wave = 0.5 + 0.5*cos(6.2831*proj);
+          float edgeA = 0.5 - 0.12*uLinkThickness;
+          float edgeB = 0.5 + 0.12*uLinkThickness;
+          float line = smoothstep(edgeB, edgeA, abs(wave-0.5));
+          line = pow(line, max(1.0, uLinkContrast));
+          acc += getColor(i) * line;
+          wsum += line;
+        }
+        col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
       }
       // subtle target bias (like lerp towards targetColorHex)
       col = mix(col, uTargetColor, clamp(uTargetMix, 0.0, 1.0));

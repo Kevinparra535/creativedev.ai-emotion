@@ -12,7 +12,7 @@ export const MainRoot = styled.main`
   width: 100%;
   height: auto;
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  /* backdrop-filter: blur(10px); */
 `;
 
 export const AnimShape = styled(motion.div)`

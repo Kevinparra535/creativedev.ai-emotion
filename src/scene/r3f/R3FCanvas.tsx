@@ -45,7 +45,7 @@ const R3FCanvas = () => {
         <ClustersScene layout='arrow' />
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraRig />
-        <CameraShake intensity={0.30} />
+        <CameraShake intensity={0.3} />
 
         <PostFX />
 

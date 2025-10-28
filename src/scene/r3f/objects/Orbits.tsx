@@ -108,7 +108,7 @@ export type BlendOrbitingSatelliteProps = {
     spinSpeed: number;
     intensity: number;
     // EV2 effect params
-    effect: 'Watercolor' | 'Oil';
+    effect: 'Watercolor' | 'Oil' | 'Link';
     wcWash: number;
     wcScale: number;
     wcFlow: number;
@@ -118,6 +118,12 @@ export type BlendOrbitingSatelliteProps = {
     oilFlow: number;
     oilShine: number;
     oilContrast: number;
+    // Link effect params
+    linkDensity: number;
+    linkThickness: number;
+    linkNoise: number;
+    linkFlow: number;
+    linkContrast: number;
   };
 };
 
@@ -182,6 +188,11 @@ export function BlendOrbitingSatellite({
         oilFlow={blend.oilFlow}
         oilShine={blend.oilShine}
         oilContrast={blend.oilContrast}
+        linkDensity={blend.linkDensity}
+        linkThickness={blend.linkThickness}
+        linkNoise={blend.linkNoise}
+        linkFlow={blend.linkFlow}
+        linkContrast={blend.linkContrast}
         interactive={false}
       />
     </group>

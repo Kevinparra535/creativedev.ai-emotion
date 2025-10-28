@@ -1,6 +1,6 @@
 import { useControls } from 'leva';
 
-export type EmotionEffect = 'Watercolor' | 'Oil';
+export type EmotionEffect = 'Watercolor' | 'Oil' | 'Link';
 
 export type EmotionVisuals2 = {
   effect: EmotionEffect;
@@ -17,11 +17,17 @@ export type EmotionVisuals2 = {
   oilFlow: number; // 0.2..2
   oilShine: number; // 0..1
   oilContrast: number; // 1..4
+  // Link params
+  linkDensity: number; // 0.5..4
+  linkThickness: number; // 0.1..1.2
+  linkNoise: number; // 0..1
+  linkFlow: number; // 0.2..2
+  linkContrast: number; // 1..4
 };
 
 export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
   const planetConfig = useControls('Planet Emotions', {
-    effect: { value: 'Watercolor' as EmotionEffect, options: ['Watercolor', 'Oil'] as const },
+    effect: { value: 'Watercolor' as EmotionEffect, options: ['Watercolor', 'Oil', 'Link'] as const },
     spinSpeed: { value: 1, min: 0.2, max: 3, step: 0.05 },
     bounce: { value: 0, min: 0, max: 1, step: 0.01 },
     // Watercolor
@@ -89,6 +95,42 @@ export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
       max: 4,
       step: 0.05,
       render: (get) => get('Planet Emotions.effect') === 'Oil'
+    },
+    // Link
+    linkDensity: {
+      value: 1.2,
+      min: 0.5,
+      max: 4,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Link'
+    },
+    linkThickness: {
+      value: 0.5,
+      min: 0.1,
+      max: 1.2,
+      step: 0.02,
+      render: (get) => get('Planet Emotions.effect') === 'Link'
+    },
+    linkNoise: {
+      value: 0.5,
+      min: 0,
+      max: 1,
+      step: 0.02,
+      render: (get) => get('Planet Emotions.effect') === 'Link'
+    },
+    linkFlow: {
+      value: 1,
+      min: 0.2,
+      max: 2,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Link'
+    },
+    linkContrast: {
+      value: 2,
+      min: 1,
+      max: 4,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Link'
     }
   });
   return { planetConfig: planetConfig as EmotionVisuals2 };

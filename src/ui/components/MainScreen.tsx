@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
-import { motion, useAnimationControls } from 'framer-motion';
+import { useAnimationControls } from 'framer-motion';
 import { useAudioLeva } from '@/hooks/useAudioLeva';
 
 import PromptInput from '@/features/prompt/PromptInput';
@@ -160,18 +160,13 @@ const MainScreen = () => {
       <LoaderIndicator reading={thinking || analyzing} />
 
       {/* input on top (fades in after intro) */}
-      <motion.div
-        initial={{ opacity: 0, y: 0 }}
-        animate={inputControls}
-        style={{ position: 'relative' }}
-      >
-        <PromptInput
-          ref={inputRef}
-          value={text}
-          onChange={handleChange}
-          placeholder='Describe how your feeling today...'
-        />
-      </motion.div>
+
+      <PromptInput
+        ref={inputRef}
+        value={text}
+        onChange={handleChange}
+        placeholder='Describe how your feeling today...'
+      />
     </MainRoot>
   );
 };

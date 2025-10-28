@@ -524,6 +524,11 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
             oilFlow={ev2.oilFlow}
             oilShine={ev2.oilShine}
             oilContrast={ev2.oilContrast}
+            linkDensity={ev2.linkDensity}
+            linkThickness={ev2.linkThickness}
+            linkNoise={ev2.linkNoise}
+            linkFlow={ev2.linkFlow}
+            linkContrast={ev2.linkContrast}
           />
         </group>
       )}
@@ -595,7 +600,12 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                     oilScale: ev2.oilScale,
                     oilFlow: ev2.oilFlow,
                     oilShine: ev2.oilShine,
-                    oilContrast: ev2.oilContrast
+                    oilContrast: ev2.oilContrast,
+                    linkDensity: ev2.linkDensity,
+                    linkThickness: ev2.linkThickness,
+                    linkNoise: ev2.linkNoise,
+                    linkFlow: ev2.linkFlow,
+                    linkContrast: ev2.linkContrast
                   }}
                 />
               );
