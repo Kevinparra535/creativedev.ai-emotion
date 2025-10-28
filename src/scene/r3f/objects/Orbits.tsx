@@ -108,7 +108,7 @@ export type BlendOrbitingSatelliteProps = {
     spinSpeed: number;
     intensity: number;
     // EV2 effect params
-    effect: 'Watercolor' | 'Oil' | 'Link';
+    effect: 'Watercolor' | 'Oil' | 'Link' | 'Holographic';
     wcWash: number;
     wcScale: number;
     wcFlow: number;
@@ -124,6 +124,12 @@ export type BlendOrbitingSatelliteProps = {
     linkNoise: number;
     linkFlow: number;
     linkContrast: number;
+    // Holographic effect params
+    holoIntensity: number;
+    holoFresnel: number;
+    holoDensity: number;
+    holoThickness: number;
+    holoSpeed: number;
   };
 };
 
@@ -170,6 +176,7 @@ export function BlendOrbitingSatellite({
   return (
     <group ref={groupRef}>
       <PrimaryBlendPlanet
+        key={`blend-sat-planet-${blend.label}-${blend.effect}-${blend.segments}-${blend.sharpness}-${blend.colors.join('-')}`}
         position={[0, 0, 0]}
         colors={blend.colors}
         label={blend.label}
@@ -193,6 +200,11 @@ export function BlendOrbitingSatellite({
         linkNoise={blend.linkNoise}
         linkFlow={blend.linkFlow}
         linkContrast={blend.linkContrast}
+        holoIntensity={blend.holoIntensity}
+        holoFresnel={blend.holoFresnel}
+        holoDensity={blend.holoDensity}
+        holoThickness={blend.holoThickness}
+        holoSpeed={blend.holoSpeed}
         interactive={false}
       />
     </group>

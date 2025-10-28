@@ -1,6 +1,6 @@
 import { useControls } from 'leva';
 
-export type EmotionEffect = 'Watercolor' | 'Oil' | 'Link';
+export type EmotionEffect = 'Watercolor' | 'Oil' | 'Link' | 'Holographic';
 
 export type EmotionVisuals2 = {
   effect: EmotionEffect;
@@ -23,11 +23,20 @@ export type EmotionVisuals2 = {
   linkNoise: number; // 0..1
   linkFlow: number; // 0.2..2
   linkContrast: number; // 1..4
+  // Holographic params
+  holoIntensity: number; // 0..1
+  holoFresnel: number; // 1..6
+  holoDensity: number; // 2..24
+  holoThickness: number; // 0.1..1.0
+  holoSpeed: number; // 0.2..2.0
 };
 
 export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
   const planetConfig = useControls('Planet Emotions', {
-    effect: { value: 'Watercolor' as EmotionEffect, options: ['Watercolor', 'Oil', 'Link'] as const },
+    effect: {
+      value: 'Watercolor' as EmotionEffect,
+      options: ['Watercolor', 'Oil', 'Link', 'Holographic'] as const
+    },
     spinSpeed: { value: 1, min: 0.2, max: 3, step: 0.05 },
     bounce: { value: 0, min: 0, max: 1, step: 0.01 },
     // Watercolor
@@ -131,6 +140,42 @@ export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
       max: 4,
       step: 0.05,
       render: (get) => get('Planet Emotions.effect') === 'Link'
+    },
+    // Holographic
+    holoIntensity: {
+      value: 0.75,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      render: (get) => get('Planet Emotions.effect') === 'Holographic'
+    },
+    holoFresnel: {
+      value: 3,
+      min: 1,
+      max: 6,
+      step: 0.1,
+      render: (get) => get('Planet Emotions.effect') === 'Holographic'
+    },
+    holoDensity: {
+      value: 10,
+      min: 2,
+      max: 24,
+      step: 1,
+      render: (get) => get('Planet Emotions.effect') === 'Holographic'
+    },
+    holoThickness: {
+      value: 0.45,
+      min: 0.1,
+      max: 1,
+      step: 0.02,
+      render: (get) => get('Planet Emotions.effect') === 'Holographic'
+    },
+    holoSpeed: {
+      value: 1.1,
+      min: 0.2,
+      max: 2,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Holographic'
     }
   });
   return { planetConfig: planetConfig as EmotionVisuals2 };

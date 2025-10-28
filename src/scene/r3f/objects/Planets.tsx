@@ -314,7 +314,13 @@ export function PrimaryBlendPlanet({
   linkThickness = 0.5,
   linkNoise = 0.5,
   linkFlow = 1.0,
-  linkContrast = 2.0
+  linkContrast = 2.0,
+  // Holographic effect params
+  holoIntensity = 0.75,
+  holoFresnel = 3,
+  holoDensity = 10,
+  holoThickness = 0.45,
+  holoSpeed = 1.1
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -332,7 +338,7 @@ export function PrimaryBlendPlanet({
   segments?: number;
   sharpness?: number;
   spinSpeed?: number;
-  effect?: 'Watercolor' | 'Oil' | 'Link';
+  effect?: 'Watercolor' | 'Oil' | 'Link' | 'Holographic';
   targetMix?: number;
   wcWash?: number;
   wcScale?: number;
@@ -349,6 +355,12 @@ export function PrimaryBlendPlanet({
   linkNoise?: number;
   linkFlow?: number;
   linkContrast?: number;
+  // Holographic effect params
+  holoIntensity?: number;
+  holoFresnel?: number;
+  holoDensity?: number;
+  holoThickness?: number;
+  holoSpeed?: number;
 }>) {
   const [hovered, setHovered] = useState<boolean>(false);
 
@@ -381,8 +393,8 @@ export function PrimaryBlendPlanet({
       uColors: { value: cols },
       uLightDir: { value: new THREE.Vector3(0.4, 0.7, 0.5).normalize() },
       uAlpha: { value: 1 },
-      // extra effects
-      uEffect: { value: effect === 'Oil' ? 1 : 0 },
+  // extra effects
+  uEffect: { value: effect === 'Oil' ? 1 : effect === 'Link' ? 2 : effect === 'Holographic' ? 3 : 0 },
       uBrightness: { value: emissiveIntensity },
       uTargetColor: { value: new THREE.Vector3(1, 1, 1) },
       uTargetMix: { value: 0 },
@@ -400,7 +412,13 @@ export function PrimaryBlendPlanet({
       uLinkThickness: { value: linkThickness },
       uLinkNoise: { value: linkNoise },
       uLinkFlow: { value: linkFlow },
-      uLinkContrast: { value: linkContrast }
+      uLinkContrast: { value: linkContrast },
+      // Holographic uniforms
+      uHoloIntensity: { value: holoIntensity },
+      uHoloFresnel: { value: holoFresnel },
+      uHoloDensity: { value: holoDensity },
+      uHoloThickness: { value: holoThickness },
+      uHoloSpeed: { value: holoSpeed }
     } as Record<string, any>;
   }, [
     palette,
@@ -420,7 +438,12 @@ export function PrimaryBlendPlanet({
     linkThickness,
     linkNoise,
     linkFlow,
-    linkContrast
+    linkContrast,
+    holoIntensity,
+    holoFresnel,
+    holoDensity,
+    holoThickness,
+    holoSpeed
   ]);
 
   // Update colors if palette changes
@@ -443,7 +466,8 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uScale.value = wcScale;
       matRef.current.uniforms.uWash.value = wcWash;
       matRef.current.uniforms.uFlow.value = wcFlow;
-      matRef.current.uniforms.uEffect.value = effect === 'Oil' ? 1 : effect === 'Link' ? 2 : 0;
+      matRef.current.uniforms.uEffect.value =
+        effect === 'Oil' ? 1 : effect === 'Link' ? 2 : effect === 'Holographic' ? 3 : 0;
       // Allow EV2 to override watercolor sharpness in real-time
       matRef.current.uniforms.uSharpness.value =
         wcSharpness ?? matRef.current.uniforms.uSharpness.value;
@@ -459,6 +483,12 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uLinkNoise.value = linkNoise;
       matRef.current.uniforms.uLinkFlow.value = linkFlow;
       matRef.current.uniforms.uLinkContrast.value = linkContrast;
+      // Update Holographic uniforms
+      matRef.current.uniforms.uHoloIntensity.value = holoIntensity;
+      matRef.current.uniforms.uHoloFresnel.value = holoFresnel;
+      matRef.current.uniforms.uHoloDensity.value = holoDensity;
+      matRef.current.uniforms.uHoloThickness.value = holoThickness;
+      matRef.current.uniforms.uHoloSpeed.value = holoSpeed;
     }
     // Scale breathing + hover pulse
     if (meshRef.current) {
@@ -525,7 +555,7 @@ export function PrimaryBlendPlanet({
     uniform vec3 uLightDir;
     uniform float uAlpha;
     uniform float uColors[36]; // 12 * 3 rgb
-    uniform int uEffect; // 0 watercolor, 1 oil
+  uniform int uEffect; // 0 watercolor, 1 oil, 2 link, 3 holographic
     uniform float uBrightness;
     uniform vec3 uTargetColor;
     uniform float uTargetMix;
@@ -544,6 +574,12 @@ export function PrimaryBlendPlanet({
     uniform float uLinkNoise;
     uniform float uLinkFlow;
     uniform float uLinkContrast;
+  // Holographic
+  uniform float uHoloIntensity;
+  uniform float uHoloFresnel;
+  uniform float uHoloDensity;
+  uniform float uHoloThickness;
+  uniform float uHoloSpeed;
 
     // Hash/Noise helpers
     float hash(vec2 p){
@@ -627,7 +663,7 @@ export function PrimaryBlendPlanet({
         vec3 H = normalize(L + V);
         float spec = pow(max(dot(N, H), 0.0), 16.0 + 64.0*uOilShine);
         col += spec * 0.25;
-      } else {
+      } else if(uEffect == 2) {
         // Link effect: flowing line bands that highlight connections
         float t = uTime * 0.2 * max(0.001, uLinkFlow) + uSeed;
         vec2 p = baseUV + vec2(fbm(baseUV*3.1 + t)*0.05*uLinkNoise);
@@ -647,6 +683,30 @@ export function PrimaryBlendPlanet({
           wsum += line;
         }
         col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
+      } else {
+        // Holographic effect: iridescent fresnel with scanning lines
+        // Base color: average of input palette
+        vec3 base = vec3(0.0);
+        for(int i=0;i<12;i++){
+          if(i>=uCount) break;
+          base += getColor(i);
+        }
+        base /= max(1.0, float(uCount));
+        // Fresnel term approximating view-dependent glow
+        vec3 N = normalize(vNormalW);
+        vec3 V = vec3(0.0, 0.0, 1.0);
+        float fres = pow(1.0 - max(dot(N, V), 0.0), max(1.0, uHoloFresnel));
+        // Iridescent rainbow
+        float h = fract(uTime * 0.05 * uHoloSpeed + baseUV.x * 0.45 + baseUV.y * 0.35);
+        vec3 iri = clamp(0.5 + 0.5 * sin(6.2831 * (h + vec3(0.0, 1.0/3.0, 2.0/3.0))), 0.0, 1.0);
+        // Scanning lines along v axis
+        float bands = 0.5 + 0.5 * sin(6.2831 * (baseUV.y * uHoloDensity + uTime * 0.2 * uHoloSpeed));
+        float edgeA = 0.5 - 0.25 * uHoloThickness;
+        float edgeB = 0.5 + 0.25 * uHoloThickness;
+        float line = smoothstep(edgeB, edgeA, abs(bands - 0.5));
+        // Combine
+        vec3 holo = mix(base, iri, 0.6) * (0.4 + 0.6 * fres) + iri * (line * 0.8);
+        col = mix(base, holo, clamp(uHoloIntensity, 0.0, 1.0));
       }
       // subtle target bias (like lerp towards targetColorHex)
       col = mix(col, uTargetColor, clamp(uTargetMix, 0.0, 1.0));

@@ -529,6 +529,11 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
             linkNoise={ev2.linkNoise}
             linkFlow={ev2.linkFlow}
             linkContrast={ev2.linkContrast}
+            holoIntensity={ev2.holoIntensity}
+            holoFresnel={ev2.holoFresnel}
+            holoDensity={ev2.holoDensity}
+            holoThickness={ev2.holoThickness}
+            holoSpeed={ev2.holoSpeed}
           />
         </group>
       )}
@@ -572,7 +577,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
               );
               sats.push(
                 <BlendOrbitingSatellite
-                  key={`blend-sat-${label}-${i}-${s.colors.join('-')}`}
+                  key={`blend-sat-${label}-${i}-${s.colors.join('-')}-${ev2.effect}`}
                   center={center}
                   a={a}
                   e={e}
@@ -605,7 +610,12 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                     linkThickness: ev2.linkThickness,
                     linkNoise: ev2.linkNoise,
                     linkFlow: ev2.linkFlow,
-                    linkContrast: ev2.linkContrast
+                    linkContrast: ev2.linkContrast,
+                    holoIntensity: ev2.holoIntensity,
+                    holoFresnel: ev2.holoFresnel,
+                    holoDensity: ev2.holoDensity,
+                    holoThickness: ev2.holoThickness,
+                    holoSpeed: ev2.holoSpeed
                   }}
                 />
               );
