@@ -9,7 +9,7 @@ function App() {
       <GlobalStyles />
       <R3FCanvas />
       <MainScreen />
-      <Leva titleBar={{ title: 'Controls' }} />
+      <Leva collapsed titleBar={{ title: 'Controls' }} />
     </>
   );
 }

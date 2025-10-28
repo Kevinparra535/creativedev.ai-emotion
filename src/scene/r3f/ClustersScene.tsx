@@ -534,6 +534,12 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
             holoDensity={ev2.holoDensity}
             holoThickness={ev2.holoThickness}
             holoSpeed={ev2.holoSpeed}
+            voroScale={ev2.voroScale}
+            voroSoft={ev2.voroSoft}
+            voroFlow={ev2.voroFlow}
+            voroJitter={ev2.voroJitter}
+            voroEdge={ev2.voroEdge}
+            voroContrast={ev2.voroContrast}
           />
         </group>
       )}
@@ -615,7 +621,13 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
                     holoFresnel: ev2.holoFresnel,
                     holoDensity: ev2.holoDensity,
                     holoThickness: ev2.holoThickness,
-                    holoSpeed: ev2.holoSpeed
+                    holoSpeed: ev2.holoSpeed,
+                    voroScale: ev2.voroScale,
+                    voroSoft: ev2.voroSoft,
+                    voroFlow: ev2.voroFlow,
+                    voroJitter: ev2.voroJitter,
+                    voroEdge: ev2.voroEdge,
+                    voroContrast: ev2.voroContrast
                   }}
                 />
               );

@@ -108,7 +108,7 @@ export type BlendOrbitingSatelliteProps = {
     spinSpeed: number;
     intensity: number;
     // EV2 effect params
-    effect: 'Watercolor' | 'Oil' | 'Link' | 'Holographic';
+  effect: 'Watercolor' | 'Oil' | 'Link' | 'Holographic' | 'Voronoi';
     wcWash: number;
     wcScale: number;
     wcFlow: number;
@@ -130,6 +130,13 @@ export type BlendOrbitingSatelliteProps = {
     holoDensity: number;
     holoThickness: number;
     holoSpeed: number;
+    // Voronoi effect params
+    voroScale: number;
+    voroSoft: number;
+    voroFlow: number;
+    voroJitter: number;
+    voroEdge: number;
+    voroContrast: number;
   };
 };
 
@@ -205,6 +212,12 @@ export function BlendOrbitingSatellite({
         holoDensity={blend.holoDensity}
         holoThickness={blend.holoThickness}
         holoSpeed={blend.holoSpeed}
+        voroScale={blend.voroScale}
+        voroSoft={blend.voroSoft}
+        voroFlow={blend.voroFlow}
+        voroJitter={blend.voroJitter}
+        voroEdge={blend.voroEdge}
+        voroContrast={blend.voroContrast}
         interactive={false}
       />
     </group>

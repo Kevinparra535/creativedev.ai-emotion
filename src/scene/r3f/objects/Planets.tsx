@@ -320,7 +320,14 @@ export function PrimaryBlendPlanet({
   holoFresnel = 3,
   holoDensity = 10,
   holoThickness = 0.45,
-  holoSpeed = 1.1
+  holoSpeed = 1.1,
+  // Voronoi params
+  voroScale = 1.6,
+  voroSoft = 0.2,
+  voroFlow = 0.9,
+  voroJitter = 0.75,
+  voroEdge = 0.8,
+  voroContrast = 2
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -338,7 +345,7 @@ export function PrimaryBlendPlanet({
   segments?: number;
   sharpness?: number;
   spinSpeed?: number;
-  effect?: 'Watercolor' | 'Oil' | 'Link' | 'Holographic';
+  effect?: 'Watercolor' | 'Oil' | 'Link' | 'Holographic' | 'Voronoi';
   targetMix?: number;
   wcWash?: number;
   wcScale?: number;
@@ -361,6 +368,13 @@ export function PrimaryBlendPlanet({
   holoDensity?: number;
   holoThickness?: number;
   holoSpeed?: number;
+  // Voronoi params
+  voroScale?: number;
+  voroSoft?: number;
+  voroFlow?: number;
+  voroJitter?: number;
+  voroEdge?: number;
+  voroContrast?: number;
 }>) {
   const [hovered, setHovered] = useState<boolean>(false);
 
@@ -393,8 +407,19 @@ export function PrimaryBlendPlanet({
       uColors: { value: cols },
       uLightDir: { value: new THREE.Vector3(0.4, 0.7, 0.5).normalize() },
       uAlpha: { value: 1 },
-  // extra effects
-  uEffect: { value: effect === 'Oil' ? 1 : effect === 'Link' ? 2 : effect === 'Holographic' ? 3 : 0 },
+      // extra effects
+      uEffect: {
+        value:
+          effect === 'Oil'
+            ? 1
+            : effect === 'Link'
+              ? 2
+              : effect === 'Holographic'
+                ? 3
+                : effect === 'Voronoi'
+                  ? 4
+                  : 0
+      },
       uBrightness: { value: emissiveIntensity },
       uTargetColor: { value: new THREE.Vector3(1, 1, 1) },
       uTargetMix: { value: 0 },
@@ -418,7 +443,14 @@ export function PrimaryBlendPlanet({
       uHoloFresnel: { value: holoFresnel },
       uHoloDensity: { value: holoDensity },
       uHoloThickness: { value: holoThickness },
-      uHoloSpeed: { value: holoSpeed }
+      uHoloSpeed: { value: holoSpeed },
+      // Voronoi uniforms
+      uVoroScale: { value: voroScale },
+      uVoroSoft: { value: voroSoft },
+      uVoroFlow: { value: voroFlow },
+      uVoroJitter: { value: voroJitter },
+      uVoroEdge: { value: voroEdge },
+      uVoroContrast: { value: voroContrast }
     } as Record<string, any>;
   }, [
     palette,
@@ -443,7 +475,13 @@ export function PrimaryBlendPlanet({
     holoFresnel,
     holoDensity,
     holoThickness,
-    holoSpeed
+    holoSpeed,
+    voroScale,
+    voroSoft,
+    voroFlow,
+    voroJitter,
+    voroEdge,
+    voroContrast
   ]);
 
   // Update colors if palette changes
@@ -467,7 +505,15 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uWash.value = wcWash;
       matRef.current.uniforms.uFlow.value = wcFlow;
       matRef.current.uniforms.uEffect.value =
-        effect === 'Oil' ? 1 : effect === 'Link' ? 2 : effect === 'Holographic' ? 3 : 0;
+        effect === 'Oil'
+          ? 1
+          : effect === 'Link'
+            ? 2
+            : effect === 'Holographic'
+              ? 3
+              : effect === 'Voronoi'
+                ? 4
+                : 0;
       // Allow EV2 to override watercolor sharpness in real-time
       matRef.current.uniforms.uSharpness.value =
         wcSharpness ?? matRef.current.uniforms.uSharpness.value;
@@ -489,6 +535,13 @@ export function PrimaryBlendPlanet({
       matRef.current.uniforms.uHoloDensity.value = holoDensity;
       matRef.current.uniforms.uHoloThickness.value = holoThickness;
       matRef.current.uniforms.uHoloSpeed.value = holoSpeed;
+      // Update Voronoi uniforms
+      matRef.current.uniforms.uVoroScale.value = voroScale;
+      matRef.current.uniforms.uVoroSoft.value = voroSoft;
+      matRef.current.uniforms.uVoroFlow.value = voroFlow;
+      matRef.current.uniforms.uVoroJitter.value = voroJitter;
+      matRef.current.uniforms.uVoroEdge.value = voroEdge;
+      matRef.current.uniforms.uVoroContrast.value = voroContrast;
     }
     // Scale breathing + hover pulse
     if (meshRef.current) {
@@ -535,10 +588,12 @@ export function PrimaryBlendPlanet({
 
   const vert = /* glsl */ `
     varying vec3 vNormalW;
+    varying vec3 vWorldPos;
     varying vec2 vUv; // retained for compatibility, not used in shader to avoid seams
     void main(){
       vUv = uv;
       vec4 wPos = modelMatrix * vec4(position, 1.0);
+      vWorldPos = wPos.xyz;
       vNormalW = normalize(mat3(modelMatrix) * normal);
       gl_Position = projectionMatrix * viewMatrix * wPos;
     }
@@ -547,7 +602,9 @@ export function PrimaryBlendPlanet({
   const frag = /* glsl */ `
     precision highp float;
     varying vec3 vNormalW;
+    varying vec3 vWorldPos;
     varying vec2 vUv;
+    uniform vec3 cameraPosition;
     uniform float uTime;
     uniform float uScale;
     uniform float uSeed;
@@ -555,7 +612,7 @@ export function PrimaryBlendPlanet({
     uniform vec3 uLightDir;
     uniform float uAlpha;
     uniform float uColors[36]; // 12 * 3 rgb
-  uniform int uEffect; // 0 watercolor, 1 oil, 2 link, 3 holographic
+  uniform int uEffect; // 0 watercolor, 1 oil, 2 link, 3 holographic, 4 voronoi
     uniform float uBrightness;
     uniform vec3 uTargetColor;
     uniform float uTargetMix;
@@ -580,6 +637,13 @@ export function PrimaryBlendPlanet({
   uniform float uHoloDensity;
   uniform float uHoloThickness;
   uniform float uHoloSpeed;
+  // Voronoi
+  uniform float uVoroScale;
+  uniform float uVoroSoft;
+  uniform float uVoroFlow;
+  uniform float uVoroJitter;
+  uniform float uVoroEdge;
+  uniform float uVoroContrast;
 
     // Hash/Noise helpers
     float hash(vec2 p){
@@ -602,6 +666,12 @@ export function PrimaryBlendPlanet({
         v += a*noise(p); p *= 2.02; a *= 0.5;
       }
       return v;
+    }
+    vec2 random2(vec2 p){
+      return vec2(
+        fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123),
+        fract(sin(dot(p, vec2(269.5, 183.3))) * 43758.5453123)
+      );
     }
     vec3 getColor(int i){
       int idx = i*3;
@@ -659,7 +729,7 @@ export function PrimaryBlendPlanet({
         // simple specular highlight
         vec3 N = normalize(vNormalW);
         vec3 L = normalize(uLightDir);
-        vec3 V = vec3(0.0, 0.0, 1.0);
+        vec3 V = normalize(cameraPosition - vWorldPos);
         vec3 H = normalize(L + V);
         float spec = pow(max(dot(N, H), 0.0), 16.0 + 64.0*uOilShine);
         col += spec * 0.25;
@@ -683,7 +753,10 @@ export function PrimaryBlendPlanet({
           wsum += line;
         }
         col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
-      } else {
+        // subtle extra glow on lines to distinguish from oil bands
+        float glow = clamp(wsum / max(1.0, float(uCount)), 0.0, 1.0);
+        col = clamp(col + vec3(glow * 0.2), 0.0, 1.0);
+      } else if(uEffect == 3) {
         // Holographic effect: iridescent fresnel with scanning lines
         // Base color: average of input palette
         vec3 base = vec3(0.0);
@@ -694,7 +767,7 @@ export function PrimaryBlendPlanet({
         base /= max(1.0, float(uCount));
         // Fresnel term approximating view-dependent glow
         vec3 N = normalize(vNormalW);
-        vec3 V = vec3(0.0, 0.0, 1.0);
+        vec3 V = normalize(cameraPosition - vWorldPos);
         float fres = pow(1.0 - max(dot(N, V), 0.0), max(1.0, uHoloFresnel));
         // Iridescent rainbow
         float h = fract(uTime * 0.05 * uHoloSpeed + baseUV.x * 0.45 + baseUV.y * 0.35);
@@ -707,6 +780,56 @@ export function PrimaryBlendPlanet({
         // Combine
         vec3 holo = mix(base, iri, 0.6) * (0.4 + 0.6 * fres) + iri * (line * 0.8);
         col = mix(base, holo, clamp(uHoloIntensity, 0.0, 1.0));
+      } else {
+        // Voronoi effect: cellular pattern with emissive edges
+        float t = uTime * 0.15 * max(0.001, uVoroFlow) + uSeed;
+        // Warp baseUV slightly for organic motion
+        vec2 uv = baseUV * uVoroScale;
+        uv += vec2(fbm(baseUV*2.3 + t) - 0.5, fbm(baseUV*2.1 - t) - 0.5) * 0.4 * uVoroFlow;
+
+        vec2 i = floor(uv);
+        vec2 f = fract(uv);
+        float minD = 1e9;
+        float secondD = 1e9;
+        vec2 minCell = vec2(0.0);
+        for(int y=-1; y<=1; y++){
+          for(int x=-1; x<=1; x++){
+            vec2 g = vec2(float(x), float(y));
+            vec2 o = random2(i + g) - 0.5;
+            o *= uVoroJitter;
+            vec2 r = g + o - f;
+            float d = dot(r, r);
+            if(d < minD){
+              secondD = minD;
+              minD = d;
+              minCell = g + o;
+            } else if(d < secondD){
+              secondD = d;
+            }
+          }
+        }
+        float dist = sqrt(minD);
+        float edge = sqrt(secondD) - dist;
+        // Edge highlight
+        float e = 1.0 - smoothstep(0.0, max(0.0001, uVoroSoft), edge);
+        e = pow(e, 1.2);
+        // Compute a color per-cell based on hashed cell id
+        float cellId = hash(i + minCell);
+        int idx = int(floor(cellId * 12.0));
+        idx = clamp(idx, 0, 11);
+        vec3 cellCol = getColor(idx);
+        // Optional contrast for cell fill
+        float fill = pow(1.0 - smoothstep(0.0, 0.9, dist), max(1.0, uVoroContrast));
+        vec3 base = cellCol * fill;
+        // add emissive-like edges colored by average palette
+        vec3 avg = vec3(0.0);
+        for(int i2=0;i2<12;i2++){
+          if(i2>=uCount) break;
+          avg += getColor(i2);
+        }
+        avg /= max(1.0, float(uCount));
+        vec3 edgeCol = mix(cellCol, avg, 0.5);
+        col = clamp(base + edgeCol * e * uVoroEdge, 0.0, 1.0);
       }
       // subtle target bias (like lerp towards targetColorHex)
       col = mix(col, uTargetColor, clamp(uTargetMix, 0.0, 1.0));

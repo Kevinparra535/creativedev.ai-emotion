@@ -1,6 +1,6 @@
 import { useControls } from 'leva';
 
-export type EmotionEffect = 'Watercolor' | 'Oil' | 'Link' | 'Holographic';
+export type EmotionEffect = 'Watercolor' | 'Oil' | 'Link' | 'Holographic' | 'Voronoi';
 
 export type EmotionVisuals2 = {
   effect: EmotionEffect;
@@ -29,13 +29,20 @@ export type EmotionVisuals2 = {
   holoDensity: number; // 2..24
   holoThickness: number; // 0.1..1.0
   holoSpeed: number; // 0.2..2.0
+  // Voronoi params
+  voroScale: number; // 0.5..6
+  voroSoft: number; // 0.0..0.6 edge softness
+  voroFlow: number; // 0.2..2.0
+  voroJitter: number; // 0..1
+  voroEdge: number; // 0..2 emissive multiplier
+  voroContrast: number; // 1..4
 };
 
 export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
   const planetConfig = useControls('Planet Emotions', {
     effect: {
       value: 'Watercolor' as EmotionEffect,
-      options: ['Watercolor', 'Oil', 'Link', 'Holographic'] as const
+      options: ['Watercolor', 'Oil', 'Link', 'Holographic', 'Voronoi'] as const
     },
     spinSpeed: { value: 1, min: 0.2, max: 3, step: 0.05 },
     bounce: { value: 0, min: 0, max: 1, step: 0.01 },
@@ -176,6 +183,49 @@ export function useEmotionVisuals2(): { planetConfig: EmotionVisuals2 } {
       max: 2,
       step: 0.05,
       render: (get) => get('Planet Emotions.effect') === 'Holographic'
+    },
+    // Voronoi
+    voroScale: {
+      value: 1.6,
+      min: 0.5,
+      max: 6,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Voronoi'
+    },
+    voroSoft: {
+      value: 0.2,
+      min: 0,
+      max: 0.6,
+      step: 0.01,
+      render: (get) => get('Planet Emotions.effect') === 'Voronoi'
+    },
+    voroFlow: {
+      value: 0.9,
+      min: 0.2,
+      max: 2,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Voronoi'
+    },
+    voroJitter: {
+      value: 0.75,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      render: (get) => get('Planet Emotions.effect') === 'Voronoi'
+    },
+    voroEdge: {
+      value: 0.8,
+      min: 0,
+      max: 2,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Voronoi'
+    },
+    voroContrast: {
+      value: 2,
+      min: 1,
+      max: 4,
+      step: 0.05,
+      render: (get) => get('Planet Emotions.effect') === 'Voronoi'
     }
   });
   return { planetConfig: planetConfig as EmotionVisuals2 };
