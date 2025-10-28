@@ -2,7 +2,7 @@ import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { Suspense, useMemo, useRef, useEffect } from 'react';
 import { UnrealBloomPass } from 'three-stdlib';
 import * as THREE from 'three';
-import { CameraControls, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
+import { CameraControls, CameraShake, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
 
 import ClustersScene from './ClustersScene';
 import { useUIStore } from '@/stores/uiStore';
@@ -45,7 +45,7 @@ const R3FCanvas = () => {
         <ClustersScene layout='arrow' />
         <PerspectiveCamera makeDefault position={[0, 0, 100]} />
         <CameraRig />
-        {/* <CameraShake intensity={0.2} /> */}
+        <CameraShake intensity={0.30} />
 
         <PostFX />
 

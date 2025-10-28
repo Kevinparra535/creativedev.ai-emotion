@@ -20,6 +20,9 @@ const config = {
   ENERGY_DELAY: 2.3,
   ENERGY_DUR: 0.8,
   CENTER_SCALE: 3, // Global main-planets spacing multiplier (applies to both layouts)
+  // Disappear animation for other galaxies once blend appears
+  CLUSTERS_DISAPPEAR_DELAY_MS: 120,
+  CLUSTERS_DISAPPEAR_DUR_MS: 800,
 
   // Audio defaults and asset mapping
   AUDIO: {
@@ -30,6 +33,10 @@ const config = {
     AMBIENT_URL: '/audio/ambient.mp3',
     AMBIENT_VOLUME: 0.25,
     SFX_VOLUME: 0.6,
+    // Blend planet appearance SFX
+    BLEND_APPEAR_ENABLED: true,
+    BLEND_APPEAR_URL: '/audio/bloop.mp3', // provide your own asset at public/audio/blop.mp3
+    BLEND_APPEAR_DETUNE_CENTS: 0,
     // Map primary emotion keys to hover SFX
     PLANET_SOUNDS: {
       love: '/audio/hover/love.mp3',
@@ -41,8 +48,7 @@ const config = {
       sadness: '/audio/hover/sadness.mp3',
       fear: '/audio/hover/fear.mp3'
     } as Record<string, string>
-  }
-  ,
+  },
   TEXTURES: {
     ENABLED: false,
     PLANET_KEY: 'joy',
