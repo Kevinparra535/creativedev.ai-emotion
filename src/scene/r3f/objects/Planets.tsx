@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import config from '@/config/config';
 
 import { usePlanetTexturePack } from '../../../utils/planetTextures';
+import { Fonts3D } from '../utils/fonts';
 import AudioManager from '@/audio/AudioManager';
 
 export type PlanetProps = {
@@ -171,6 +172,7 @@ export function Planet({
       {/* label */}
       <group position={[0, radius + 0.36, 0]}>
         <Text
+          font={Fonts3D.heading}
           fontSize={Math.max(0.22, radius * 0.34)}
           color={colorA}
           anchorX='center'
@@ -284,7 +286,7 @@ export function EnergyPulse({
 export function PrimaryBlendPlanet({
   position,
   colors,
-  label = 'blend',
+  label = '',
   radius = 1.4,
   intensity = 0.6,
   speed = 0.6,
@@ -314,7 +316,7 @@ export function PrimaryBlendPlanet({
   linkDensity = 1.2,
   linkThickness = 0.5,
   linkNoise = 0.5,
-  linkFlow = 1,
+  linkFlow = 1.0,
   linkContrast = 2,
   // Holographic effect params
   holoIntensity = 0.75,
@@ -879,8 +881,9 @@ export function PrimaryBlendPlanet({
           transparent
         />
       </mesh>
-      {/* <group position={[0, radius + 0.28, 0]}>
+      <group position={[0, radius + 0.28, 0]}>
         <Text
+          font={Fonts3D.heading}
           fontSize={Math.max(0.18, radius * 0.28)}
           color={'#ffffff'}
           anchorX='center'
@@ -890,7 +893,7 @@ export function PrimaryBlendPlanet({
         >
           {label}
         </Text>
-      </group> */}
+      </group>
     </group>
   );
 }

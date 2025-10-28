@@ -1,5 +1,5 @@
 import { type ChangeEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useAnimationControls } from 'framer-motion';
+import { motion, useAnimationControls } from 'framer-motion';
 
 import { useAudioLeva } from '@/hooks/useAudioLeva';
 import { useEmotionCoordinator } from '@/hooks/useEmotionCoordinator';
@@ -113,12 +113,14 @@ const MainScreen = () => {
 
       <LoaderIndicator reading={thinking || analyzing} />
 
-      <PromptInput
-        ref={inputRef}
-        value={text}
-        onChange={handleChange}
-        placeholder='Describe how your feeling today...'
-      />
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={inputControls}>
+        <PromptInput
+          ref={inputRef}
+          value={text}
+          onChange={handleChange}
+          placeholder='Describe how your feeling today...'
+        />
+      </motion.div>
     </MainRoot>
   );
 };
