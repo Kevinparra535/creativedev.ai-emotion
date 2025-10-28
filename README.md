@@ -1,117 +1,35 @@
-# creativedev.ai-emotion
+# CreativeDev: Emotion Universe [Live demo](https://labs-ai-emotion.web.app/)
 
-“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes y micro-animaciones en DOM, y una galaxia R3F de emociones con enlaces “energéticos”, intro animada, audio interactivo, un planeta con texturas PBR y un Planeta Blend de primarias con efectos en tiempo real (Watercolor, Oil, Link, Holographic y Voronoi).
+!["Emotion Universe cover"](docs/readme_cover.png)
 
-## Project at a glance
+![R3F](https://img.shields.io/badge/R3F-React%20Three%20Fiber-black)
+![WebGL2](https://img.shields.io/badge/WebGL2-FBO-blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-- React 19 + TypeScript + Vite (SWC). Entrypoint: `src/main.tsx` → `src/App.tsx`.
-- Alias `@` → `src` (ver `vite.config.ts`).
-- Render dual: DOM (Framer Motion + styled-components) y WebGL (R3F/Drei/Postprocessing). Escena principal: `ClustersScene`.
-- Estado: Zustand (UI stores en `src/stores/*`, store de dominio en `src/state/*`). Controles: Leva.
-- Scripts: `dev`, `build` (`tsc -b && vite build`), `preview`, `lint`.
-  - Controles destacados:
-    - Emotion Visuals 2.0: selector de efecto para el Planeta Blend (Watercolor | Oil) y parámetros en tiempo real.
-    - Visuals / Blend Planet: calidad (segmentos, nitidez) del Planeta Blend.
-    - Visuals / Post: Bloom, Noise, Vignette y Chromatic Aberration.
+Text → real-time emotional analysis → synchronized DOM + R3F visuals (planets, energy links, audio, PBR, and a Blend Planet with live shader effects: Watercolor, Oil, Link, Holographic, Voronoi).
+This README keeps only the essentials; extended content lives in [docs/](docs/README.md).
 
-## Quickstart
+## Stack (brief)
 
-Requisitos: Node 18+.
+- React 19 + TypeScript + Vite 7 (SWC)
+- Three.js with React Three Fiber (@react-three/fiber, @react-three/drei)
+- PostFX (Bloom, Noise, Vignette, Chromatic Aberration) with a lightweight pipeline
+- State: Zustand; Controls: Leva; Styling: styled-components
 
-```powershell
-npm i
-npm run dev     # HMR
-npm run build   # TS + Vite build
-npm run preview # servir la build
-npm run lint    # ESLint + reglas tipo-aware
-```
+## Quick start
 
-Variables de entorno (opcional): copia `env_template` a `.env` o `.env.local` y ajusta:
+- Dev: `npm run dev`
+- Build: `npm run build`
+- Preview: `npm run preview`
 
-```dotenv
-VITE_EMOTION_MODE=auto       # online | offline | auto
-VITE_OPENAI_API_KEY=         # sólo si usas modo online/auto
-VITE_OPENAI_BASE_URL=https://api.openai.com/v1
-VITE_OPENAI_MODEL=gpt-4o-mini
-```
+Note: Use import.meta.env with VITE_* keys; do not expose the full process.env.
 
-Sin clave, el motor usa heurística local. Con clave, puedes forzar `VITE_EMOTION_MODE=online`.
+## Documentation
 
-## Características
+- Docs index: [docs/README.md](docs/README.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Data contracts: [docs/data-contracts.md](docs/data-contracts.md)
 
-- Engine de emociones con factory: `online`, `offline` y `auto` (Zod + parsers permisivos + mapeos robustos).
-- Visual DOM: gradientes y micro-movimiento sincronizados con el preset de la emoción.
-- Galaxia R3F:
-  - Planetas principales (primarias) con satélites en órbitas elípticas.
-  - Enlaces “energéticos” entre primarias (curvas bezier con degradado y “neuron pulses”).
-  - Corrientes efímeras basadas en `links` del backend (pairs/relations) que sustituyen temporalmente los enlaces por defecto.
-  - Durante `thinking` (escritura/análisis), los enlaces por defecto se ocultan; si hay `links` del backend, se muestran corrientes.
-  - Intro animada por etapas (planetas → satélites → órbitas → enlaces).
-  - Audio: soundtrack ambiental + SFX en hover por planeta. Leva para ajustar volúmenes.
-  - Texturas PBR para un solo planeta configurable (albedo/normal/roughness/AO/metalness/height).
-  - Planeta Blend de primarias: shader paramétrico que mezcla colores de emociones activas y aplica efectos seleccionables en Leva (Watercolor | Oil | Link | Holographic | Voronoi).
+## Credits
 
-## Configuración clave
-
-Editar `src/config/config.ts`:
-
-- `EMOTION_MODE`: `online | offline | auto`.
-- `AUDIO`: toggles y volúmenes; rutas en `public/audio`.
-- `TEXTURES`: `ENABLED`, `PLANET_KEY`, `PACK`, `ENABLE_DISPLACEMENT`, `DISPLACEMENT_SCALE`.
-
-Texturas de ejemplo: `public/textures/planets/ravine-rock1-bl/*`.
-
-Nota: El AO requiere `uv2`. El proyecto ya duplica `uv → uv2` en la geometría de la esfera.
-
-## Estructura relevante
-
-Config: `src/config/config.ts`, `src/config/emotion-presets.ts`, `src/config/emotion-clusters.ts`.
-
-- Servicios IA: `src/services/EmotionServiceFactory.ts`, `src/services/OpenIAAdapter.ts`, `src/services/universeGraph.ts`.
-- Heurística local: `src/ai/local-emotions.ts`.
-Estado: `src/state/universe.store.ts` (dominio), `src/stores/*` (UI stores). R3F consume `useUniverse`.
-
-- Hooks: `src/hooks/useEmotionCoordinator.ts` (análisis unificado + debounce), `src/hooks/useVisualLeva.ts`, `src/hooks/useAudioLeva.ts`, `src/hooks/useBlendLeva.ts`, `src/hooks/useEmotionVisuals2.ts`.
-- R3F: `src/scene/r3f/R3FCanvas.tsx`, `src/scene/r3f/ClustersScene.tsx`, `src/scene/r3f/UniverseScene.tsx`.
-- R3F objetos/utils: `src/scene/r3f/objects/Planets.tsx`, `src/scene/r3f/objects/Orbits.tsx`, `src/scene/r3f/utils/*`.
-- DOM: `src/scene/dom/Vizualizer.tsx`, `src/ui/components/*`.
-
-## Cómo usar
-
-1. Ejecuta `npm run dev` y escribe en el input. Verás feedback DOM inmediato y la galaxia R3F.
-2. Activa audio/ajusta volúmenes desde Leva (si está habilitado en `config.ts`).
-3. Para texturas PBR, activa `TEXTURES.ENABLED = true` y define `PLANET_KEY` (ej. `'joy'`).
-4. Para máxima integración de ClustersScene, envía `links` (pairs) y/o `relations` por emoción en el payload (ver contratos).
-
-Controles visuales (Leva):
-
-- Emotion Visuals 2.0
-  - effect: `Watercolor | Oil | Link | Holographic | Voronoi`
-  - Watercolor: `wcWash`, `wcScale`, `wcSharpness`, `wcFlow`
-  - Oil: `oilSwirl`, `oilScale`, `oilFlow`, `oilShine`, `oilContrast`
-  - Link: `linkDensity`, `linkThickness`, `linkNoise`, `linkFlow`, `linkContrast`
-  - Holographic: `holoIntensity`, `holoFresnel`, `holoDensity`, `holoThickness`, `holoSpeed`
-  - Voronoi: `voroScale`, `voroSoft`, `voroFlow`, `voroJitter`, `voroEdge`, `voroContrast`
-  - Global: `spinSpeed`, `bounce`
-- Visuals / Blend Planet: `quality` (ajusta `segments` y `sharpness`)
-- Visuals / Post: Bloom, Noise, Vignette, Chromatic Aberration
-
-Nota: la Nebula fue retirada; el canvas usa sólo PostFX.
-
-## Troubleshooting
-
-- “No veo texturas PBR”: verifica `TEXTURES.ENABLED = true` y que el `PLANET_KEY` coincida con una clave de `emotion-clusters`. Revisa que el pack exista en `public/textures/planets/<pack>`.
-- “El AO oscurece todo”: la esfera ya copia `uv`→`uv2`. Asegúrate que el pack tenga `*_ao.png` válido; puedes reducir `aoMapIntensity` si lo deseas.
-- “No suena el audio”: los navegadores bloquean auto-play. Interactúa una vez (click/tecla) para reanudar; el proyecto intenta `resume` automáticamente.
-- “Las líneas se ven diferentes con efectos”: ajusta Bloom en `Visuals / Post` (sube `luminanceThreshold` o baja `intensity`) o desactívalo; también puedes agregar `toneMapped={false}` a líneas si necesitas color estable.
-- “El Planeta Blend se ve desaturado”: baja `wcWash` (Watercolor) o usa `useTextureColor` con un color de referencia; en Oil, sube `oilContrast` y `oilShine`.
-
-## Documentación
-
-- Arquitectura: `docs/architecture.md` (flujos, contratos, módulos y cómo extender).
-- Contratos de datos: `docs/data-contracts.md` (payload IA, mapeo a dominio, ejemplos con `id` y `relations`).
-- Instrucciones de desarrollo: `.github/copilot-instructions.md` (resumen técnico, flujos de trabajo y gotchas).
-
----
-
-Hecho con React, R3F y cariño.
+- Audio, textures, and shader techniques inspired by the R3F community and Three.js examples.
