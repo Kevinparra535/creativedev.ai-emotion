@@ -5,7 +5,8 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
-  useRef} from 'react';
+  useRef
+} from 'react';
 
 import { getPresetForEmotion } from '@/config/emotion-presets';
 
@@ -144,7 +145,6 @@ const PromptInput = forwardRef<HTMLTextAreaElement, Props>(
     return (
       <HighlightWrapper>
         <HighlightsLayer
-          // aria-hidden
           ref={highlightsRef}
           dangerouslySetInnerHTML={{ __html: htmlToRender + (htmlToRender ? '' : ' ') }}
         />

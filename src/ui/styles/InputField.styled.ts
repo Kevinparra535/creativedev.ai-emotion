@@ -1,11 +1,15 @@
 import styled, { keyframes } from 'styled-components';
 
-import { fonts, spacing } from './scssTokens';
+import { fonts, scssMedia, spacing } from './scssTokens';
 
 // Wrapper to stack highlights behind the textarea
 export const HighlightWrapper = styled.div`
   position: relative;
-  width: clamp(280px, 50vw, 640px);
+  width: clamp(280px, 95vw, 640px);
+
+  ${scssMedia['desktop-s']} {
+    width: clamp(280px, 50vw, 640px);
+  }
 `;
 
 const gradientShift = keyframes`
@@ -55,7 +59,7 @@ export const InputFieldRoot = styled.textarea`
   padding: ${spacing.space_x2} ${spacing.space_x3};
   position: relative;
   z-index: 2;
-  width: clamp(280px, 50vw, 640px);
+  width: clamp(280px, 95vw, 640px);
   box-sizing: border-box;
   min-height: 56px;
   max-height: 200px;
@@ -79,5 +83,9 @@ export const InputFieldRoot = styled.textarea`
 
   &::placeholder {
     color: transparent; /* hidden; overlay renders placeholder */
+  }
+
+  ${scssMedia['desktop-s']} {
+    width: clamp(280px, 50vw, 640px);
   }
 `;

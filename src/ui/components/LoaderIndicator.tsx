@@ -1,4 +1,4 @@
-import { AnimatePresence,motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import styled from 'styled-components';
 
 import { fontSize, spacing } from '../styles/scssTokens';
@@ -10,38 +10,35 @@ type Props = {
 const LoaderIndicator = ({ reading = true }: Props) => (
   <AnimatePresence>
     {reading && (
-    <Indicator
-          aria-live='polite'
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 4 }}
-          transition={{ duration: 0.2 }}
-        >
-      <span>Feeling</span>
-      <Dots aria-hidden='true'>
-        {[0, 1, 2].map((i) => (
-          <Dot
-                key={i}
-                animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
-                transition={{
-                  duration: 0.9,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: i * 0.12
-                }}
-              />
-            ))}
-      </Dots>
-    </Indicator>
-      )}
+      <Indicator
+        aria-live='polite'
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 4 }}
+        transition={{ duration: 0.2 }}
+      >
+        <span>Feeling</span>
+        <Dots aria-hidden='true'>
+          {[0, 1, 2].map((i) => (
+            <Dot
+              key={i}
+              animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
+              transition={{
+                duration: 0.9,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: i * 0.12
+              }}
+            />
+          ))}
+        </Dots>
+      </Indicator>
+    )}
   </AnimatePresence>
-  );
+);
 
 const Indicator = styled(motion.output)`
-  position: absolute;
-  bottom: 30px;
-  left: 20%;
-  transform: translateX(-50%);
+  position: relative;
   z-index: 2;
   display: inline-flex;
   align-items: center;
