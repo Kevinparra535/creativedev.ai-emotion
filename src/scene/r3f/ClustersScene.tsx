@@ -308,8 +308,10 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           segments={blendSegments}
           sharpness={blendSharpness}
           spinSpeed={ev2.spinSpeed}
-          targetColorHex={ev2.useTextureColor ? ev2.textureColor : undefined}
-          targetMix={ev2.useTextureColor ? 0.6 : 0.25}
+          wcWash={ev2.wcWash}
+          wcScale={ev2.wcScale}
+          wcFlow={ev2.wcFlow}
+          wcSharpness={ev2.wcSharpness}
         />
       )}
       {/* Energy links between main planets (only primaries). Hidden while thinking or when backend pairs are present. */}

@@ -298,7 +298,11 @@ export function PrimaryBlendPlanet({
   segments = 128,
   sharpness = 2.2,
   spinSpeed = 1,
-  targetMix = 0.25
+  targetMix = 0.25,
+  wcWash = 0.06,
+  wcScale = 1,
+  wcFlow = 1,
+  wcSharpness = 2.2
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -317,6 +321,10 @@ export function PrimaryBlendPlanet({
   sharpness?: number;
   spinSpeed?: number;
   targetMix?: number;
+  wcWash?: number;
+  wcScale?: number;
+  wcFlow?: number;
+  wcSharpness?: number;
 }>) {
   const pos = Array.isArray(position) ? position : position.toArray();
   const n = Math.max(0, Math.min(12, colors.length));
@@ -339,7 +347,7 @@ export function PrimaryBlendPlanet({
     }
     return {
       uTime: { value: 0 },
-      uScale: { value: 2.2 },
+      uScale: { value: wcScale },
       uSeed: { value: Math.random() * 1000 },
       uCount: { value: n },
       uColors: { value: cols },
@@ -349,9 +357,11 @@ export function PrimaryBlendPlanet({
       uBrightness: { value: emissiveIntensity },
       uTargetColor: { value: new THREE.Vector3(1, 1, 1) },
       uTargetMix: { value: 0 },
-      uSharpness: { value: sharpness }
+      uSharpness: { value: sharpness },
+      uWash: { value: wcWash },
+      uFlow: { value: wcFlow }
     } as Record<string, any>;
-  }, [palette, n, emissiveIntensity, sharpness]);
+  }, [palette, n, emissiveIntensity, sharpness, wcWash, wcScale, wcFlow]);
 
   // Update colors if palette changes
   useMemo(() => {
@@ -368,17 +378,30 @@ export function PrimaryBlendPlanet({
 
   useFrame((_, delta) => {
     tRef.current += delta * (0.5 + speed);
-    if (matRef.current) matRef.current.uniforms.uTime.value = tRef.current;
+    if (matRef.current) {
+      matRef.current.uniforms.uTime.value = tRef.current;
+      matRef.current.uniforms.uScale.value = wcScale;
+      matRef.current.uniforms.uWash.value = wcWash;
+      matRef.current.uniforms.uFlow.value = wcFlow;
+      // Allow EV2 to override watercolor sharpness in real-time
+      matRef.current.uniforms.uSharpness.value =
+        wcSharpness ?? matRef.current.uniforms.uSharpness.value;
+    }
     // Scale breathing + hover pulse
     if (meshRef.current) {
       // exponential decay of pulse
       pulseRef.current += (0 - pulseRef.current) * Math.min(1, delta * 4);
-      const amp = 0.06 + 0.06 * intensity + 0.06 * pulseRef.current;
+      // Bounce fix: when intensity==0, no oscillation (except transient hover pulse)
+      const baseAmp = 0.12 * Math.max(0, Math.min(1, intensity));
       // include intensity-driven micro-pulse similar to Planet
       const freq = 4 * Math.max(0, pulseIntensity);
       const micro =
-        Math.sin(tRef.current * Math.max(0.001, freq)) * 0.06 * Math.max(0, pulseIntensity);
-      const s = radius * (1 + Math.sin(tRef.current * 2.2) * amp + micro);
+        Math.sin(tRef.current * Math.max(0.001, freq)) *
+        0.06 *
+        Math.max(0, pulseIntensity) *
+        Math.max(0, Math.min(1, intensity));
+      const breath = Math.sin(tRef.current * 2.2) * baseAmp;
+      const s = radius * (1 + breath + micro + 0.06 * pulseRef.current);
       meshRef.current.scale.set(s, s, s);
       // constant spin: full 360° every ~24s
       const spinPeriodSec = 24 / Math.max(0.001, spinSpeed);
@@ -401,7 +424,7 @@ export function PrimaryBlendPlanet({
       targetColorRef.current.lerp(target, Math.min(1, delta * 2));
       const v = targetColorRef.current;
       matRef.current.uniforms.uTargetColor.value.set(v.r, v.g, v.b);
-      matRef.current.uniforms.uTargetMix.value = 0.25; // subtle bias
+      matRef.current.uniforms.uTargetMix.value = Math.max(0, Math.min(1, targetMix));
     } else if (matRef.current) {
       matRef.current.uniforms.uTargetMix.value = 0.0;
     }
@@ -433,6 +456,8 @@ export function PrimaryBlendPlanet({
     uniform vec3 uTargetColor;
     uniform float uTargetMix;
     uniform float uSharpness;
+    uniform float uWash;
+    uniform float uFlow;
 
     // Hash/Noise helpers
     float hash(vec2 p){
@@ -463,7 +488,7 @@ export function PrimaryBlendPlanet({
     void main(){
       // watercolor-ish banded blend
       vec2 p = vUv * uScale;
-      float t = uTime * 0.15 + uSeed;
+  float t = uTime * 0.15 * max(0.001, uFlow) + uSeed;
       float f = fbm(p + vec2(t, -t));
       // weights per color using phase-shifted fbm + softmax-like
       vec3 acc = vec3(0.0);
@@ -479,13 +504,15 @@ export function PrimaryBlendPlanet({
         wsum += w;
       }
       vec3 col = wsum > 0.0001 ? acc / wsum : vec3(0.5);
-      // paper wash: subtle desaturation and light grain
-      col = mix(col, vec3(dot(col, vec3(0.333))), 0.08);
+  // paper wash: adjustable desaturation
+  col = mix(col, vec3(dot(col, vec3(0.333))), clamp(uWash, 0.0, 0.5));
       // subtle target bias (like lerp towards targetColorHex)
       col = mix(col, uTargetColor, clamp(uTargetMix, 0.0, 1.0));
-      // simple lambert lighting and emissive-like brightness factor
+      // simple lambert + emissive add (more vivid, like other planets)
       float diff = clamp(dot(normalize(vNormalW), normalize(uLightDir)), 0.12, 1.0);
-      col *= diff * (1.0 + uBrightness);
+      vec3 lit = col * diff;
+      vec3 emis = col * uBrightness;
+      col = clamp(lit + emis, 0.0, 1.0);
       gl_FragColor = vec4(col, uAlpha);
     }
   `;

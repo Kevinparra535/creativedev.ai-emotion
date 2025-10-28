@@ -231,7 +231,7 @@ export const OpenIAAdapter = {
     const { emotions, links } = await this.analyzeMulti(text);
     // Apply rules if needed (empty ruleset placeholder for now)
     const ruleLinks = new RuleEngine({ id: 'base', rules: [] }).apply(emotions);
-  let merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
+  const merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
   // Fallback: if no links provided by the model, synthesize 1–2 cross-cluster links
     if (!merged.length && emotions.length > 1) {
       type MetaMaybeScore = { score?: number };

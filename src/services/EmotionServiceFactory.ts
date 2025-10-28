@@ -62,7 +62,7 @@ const LocalEmotionService: EmotionService = {
     const { emotions, links } = await this.analyzeMulti(text);
     const rules = config.ENABLE_ENERGY_LINKS ? EnergyRules : [];
     const ruleLinks = new RuleEngine({ id: 'energies', rules }).apply(emotions);
-    let merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
+  const merged = GraphBuilder.mergeLinks(...links, ...ruleLinks);
     // Re-balance: if there are links but none are cross-cluster, synthesize 1–2 cross-cluster links
     if (merged.length > 0) {
   const byId = new Map(emotions.map((e) => [e.id, e] as const));
