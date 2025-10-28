@@ -314,8 +314,8 @@ export function PrimaryBlendPlanet({
   linkDensity = 1.2,
   linkThickness = 0.5,
   linkNoise = 0.5,
-  linkFlow = 1.0,
-  linkContrast = 2.0,
+  linkFlow = 1,
+  linkContrast = 2,
   // Holographic effect params
   holoIntensity = 0.75,
   holoFresnel = 3,
@@ -605,7 +605,6 @@ export function PrimaryBlendPlanet({
     varying vec3 vNormalW;
     varying vec3 vWorldPos;
     varying vec2 vUv;
-    uniform vec3 cameraPosition;
     uniform float uTime;
     uniform float uScale;
     uniform float uSeed;
@@ -880,7 +879,7 @@ export function PrimaryBlendPlanet({
           transparent
         />
       </mesh>
-      <group position={[0, radius + 0.28, 0]}>
+      {/* <group position={[0, radius + 0.28, 0]}>
         <Text
           fontSize={Math.max(0.18, radius * 0.28)}
           color={'#ffffff'}
@@ -891,7 +890,7 @@ export function PrimaryBlendPlanet({
         >
           {label}
         </Text>
-      </group>
+      </group> */}
     </group>
   );
 }
