@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 
 import { getClusters, clusterKeyForLabel } from '@/config/emotion-clusters';
 
@@ -18,7 +18,7 @@ import {
 } from '@/utils/sceneUtils';
 
 import { Planet, EnergyPulse, PrimaryBlendPlanet } from './objects/Planets';
-import { OrbitingSatellite, OrbitLine } from './objects/Orbits';
+import { OrbitingSatellite, OrbitLine, BlendOrbitingSatellite } from './objects/Orbits';
 
 import { useUniverse } from '@/state/universe.store';
 import { useBlendLeva } from '@/hooks/useBlendLeva';
@@ -57,6 +57,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   const { layout = 'centers' } = props;
   const clusters = useMemo(() => getClusters(), []);
   const thinking = useUIStore((s) => s.thinking);
+  const { camera, size } = useThree();
 
   // Consume universe data (emotions/links/layout) without altering current visuals
   // Subscribe to store slices separately to avoid creating a new object each render
@@ -65,7 +66,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   // const universeLayout = useUniverse((s) => s.layout);
 
   // Derive per-cluster weights from injected universe emotions (for future use)
-  const { clusterWeights, maxClusterWeight } = useMemo(() => {
+  const { clusterWeights } = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of clusters) map.set(c.key, 0);
     for (const e of emotions) {
@@ -78,9 +79,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           : ((e as any).score ?? 0.5);
       map.set(k, prev + w);
     }
-    let max = 0;
-    for (const v of map.values()) max = Math.max(max, v);
-    return { clusterWeights: map, maxClusterWeight: max || 1 };
+    // keep weights for potential future use (clusters stay visually static regardless)
+    return { clusterWeights: map };
   }, [clusters, emotions]);
   // Keep latest derived weights in a ref for future steps (consumes universe data without altering visuals)
   const clusterWeightsRef = useRef<Map<string, number>>(new Map());
@@ -291,15 +291,97 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     return { colors: cols, pos, label, intensity };
   }, [emotions, clusters, mainPositions, intro.tPlanet]);
 
-  // Trigger a camera focus to the blend planet when it appears
+  // (moved below satellites memo)
+
+  // Build relation satellites for the central blend planet
+  const blendSatellites = useMemo(() => {
+    if (!emotions || emotions.length === 0)
+      return [] as Array<{
+        label: string;
+        colors: string[];
+      }>;
+    const acc = new Map<string, Set<string>>();
+    for (const e of emotions) {
+      const relations = (e.meta as any)?.relations as string[] | undefined;
+      if (!relations || relations.length === 0) continue;
+      // color of the container emotion (where satellite appears)
+      const parentColor =
+        e.colorHex ??
+        (() => {
+          const k = clusterKeyForLabel(e.label);
+          const idx = k ? clusters.findIndex((c) => c.key === k) : -1;
+          return clusters[idx >= 0 ? idx : 0].colors[0];
+        })();
+      for (const r of relations) {
+        const key = r.toLowerCase();
+        let set = acc.get(key);
+        if (!set) {
+          set = new Set<string>();
+          acc.set(key, set);
+        }
+        set.add(parentColor);
+      }
+    }
+    const out: Array<{ label: string; colors: string[] }> = [];
+    for (const [label, set] of acc.entries()) {
+      const colors = Array.from(set).slice(0, 6); // cap to 6 for clarity
+      if (colors.length > 0) out.push({ label, colors });
+    }
+    return out.sort((a, b) => a.label.localeCompare(b.label));
+  }, [emotions, clusters]);
+
+  // Trigger a camera focus to frame the blend system (planet + orbits + satellites)
   useEffect(() => {
     if (!blend || didFocusRef.current) return;
-    // Wait a bit into the intro so it's on-screen
-    if (intro.tPlanet > 0.6) {
-      didFocusRef.current = true;
-      focusOn({ target: [blend.pos.x, blend.pos.y, blend.pos.z], distance: 14 });
+    if (intro.tPlanet <= 0.6) return; // wait a bit into the intro so it's on-screen
+
+    // Estimate a bounding radius that encloses the full blend system:
+    // - central planet radius (depends on color count)
+    // - max ellipse extent a*(1+e)
+    // - largest satellite radius
+    // - small visual margin
+    const a = 4.6; // base semi-major axis used for blend satellites
+    const e = 0.14;
+    const centralR =
+      1.6 + Math.min(1.4, Math.sqrt(Math.max(0, (blend.colors.length ?? 0) - 1)) * 0.18);
+    const maxSatR = (blendSatellites || []).reduce((m, s) => {
+      const r = Math.max(0.32, 0.38 + 0.06 * Math.max(0, (s.colors?.length ?? 1) - 1));
+      return Math.max(m, r);
+    }, 0.4);
+    const orbitMax = a * (1 + e) + maxSatR;
+    const R = Math.max(centralR, orbitMax) + 0.8; // margin
+
+    // Compute camera distance to fit R in view given current FOV and aspect
+    const persp = camera as THREE.PerspectiveCamera;
+    const vfovDeg = persp && (persp as any).isPerspectiveCamera ? persp.fov : 45;
+    const vfov = (vfovDeg * Math.PI) / 180;
+    const aspect = size.width > 0 && size.height > 0 ? size.width / size.height : 16 / 9;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+    const distV = R / Math.tan(vfov / 2);
+    const distH = R / Math.tan(hfov / 2);
+    const distance = Math.max(distV, distH);
+
+    didFocusRef.current = true;
+    focusOn({ target: [blend.pos.x, blend.pos.y, blend.pos.z], distance });
+  }, [blend, blendSatellites, intro.tPlanet, focusOn, camera, size]);
+
+  // Helper to build a multi-stop gradient across N control colors for a path of given length
+  const gradientColorsMulti = (stops: string[], count: number): THREE.Color[] => {
+    if (stops.length <= 1) {
+      const c = new THREE.Color(stops[0] ?? '#ffffff');
+      return Array.from({ length: count }, () => c.clone());
     }
-  }, [blend, intro.tPlanet, focusOn]);
+    const cols = stops.map((h) => new THREE.Color(h));
+    const segs = cols.length - 1;
+    const out: THREE.Color[] = [];
+    for (let i = 0; i < count; i++) {
+      const t = count <= 1 ? 0 : i / (count - 1);
+      const s = Math.min(segs - 1, Math.floor(t * segs));
+      const localT = segs === 0 ? 0 : t * segs - s;
+      out.push(cols[s].clone().lerp(cols[s + 1], localT));
+    }
+    return out;
+  };
 
   return (
     <group>
@@ -326,6 +408,83 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           oilShine={ev2.oilShine}
           oilContrast={ev2.oilContrast}
         />
+      )}
+      {/* Blend planet satellites based on relations */}
+      {blend && blendSatellites.length > 0 && (
+        <group>
+          {(() => {
+            const center = blend.pos.clone();
+            const N = blendSatellites.length;
+            // Increase base ring radius for more separation from the central blend planet
+            const baseA = 4.6; // larger ring radius to reduce overlaps
+            const e = 0.14; // mild eccentricity
+            const tilt = new THREE.Euler(0.25, 0, 0.15, 'XYZ');
+            const satSegments = Math.max(32, Math.round(blendSegments * 0.5));
+            const sats = [] as any[];
+            for (let i = 0; i < N; i++) {
+              const s = blendSatellites[i];
+              // Slight radial jitter + progressive spacing per index
+              const a = baseA + Math.sin(i * 1.234) * 0.35 + (i % 5) * 0.18;
+              const theta = i * 0.31 + 0.5; // in-plane rotation
+              const phase0 = (i / Math.max(1, N)) * Math.PI * 2; // even start
+              const speed = 0.18 + 0.04 * Math.sin(i * 0.77);
+              const label = s.label;
+              // Slightly increase min radius for clearer visual separation
+              const r = Math.max(0.32, 0.38 + 0.06 * (s.colors.length - 1));
+
+              // Orbit line with multi-stop gradient reflecting the satellite's color composition
+              const orbitPts = makeOrbitPoints(center, a, e, theta, tilt, layout, 96);
+              const vColors = gradientColorsMulti(s.colors, orbitPts.length);
+              sats.push(
+                <Line
+                  key={`blend-orbit-${label}-${i}`}
+                  points={orbitPts}
+                  vertexColors={vColors}
+                  transparent
+                  opacity={0.22 * intro.tOrbit}
+                  depthWrite={false}
+                  lineWidth={1}
+                  visible={intro.tOrbit > 0.02}
+                />
+              );
+              sats.push(
+                <BlendOrbitingSatellite
+                  key={`blend-sat-${label}-${i}`}
+                  center={center}
+                  a={a}
+                  e={e}
+                  theta={theta}
+                  euler={tilt}
+                  layout={layout}
+                  phase0={phase0}
+                  speed={speed}
+                  introZOffset={(1 - intro.tPlanet) * 80}
+                  introScale={0.6 + 0.4 * intro.tSat}
+                  blend={{
+                    colors: s.colors,
+                    label,
+                    radius: r,
+                    segments: satSegments,
+                    sharpness: blendSharpness,
+                    spinSpeed: ev2.spinSpeed,
+                    intensity: Math.max(0, Math.min(1, ev2.bounce * 0.8)),
+                    effect: ev2.effect,
+                    wcWash: ev2.wcWash,
+                    wcScale: ev2.wcScale,
+                    wcFlow: ev2.wcFlow,
+                    wcSharpness: ev2.wcSharpness,
+                    oilSwirl: ev2.oilSwirl,
+                    oilScale: ev2.oilScale,
+                    oilFlow: ev2.oilFlow,
+                    oilShine: ev2.oilShine,
+                    oilContrast: ev2.oilContrast
+                  }}
+                />
+              );
+            }
+            return sats;
+          })()}
+        </group>
       )}
       {/* Energy links between main planets (only primaries). Hidden while thinking or when backend pairs are present. */}
       <group visible={showDefaultLinks}>
@@ -391,6 +550,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           );
         })}
       </group>
+
       {/* Ephemeral pair "electric currents" between clusters based on links from backend */}
       <group visible={showPairCurrents}>
         {[...pairCurrentsRef.current.values()].map((pc) => {
@@ -455,16 +615,13 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
           );
         })}
       </group>
+
       {clusters.map((c, idx) => {
         const colorA = c.colors[0] ?? '#ffffff';
         const colorB = c.colors[1] ?? colorA;
-        // Determine target color for this cluster from strongest matching emotion (fallback to cluster colorA)
-        const topEmotion = emotions
-          .filter((e) => clusterKeyForLabel(e.label) === c.key)
-          .sort((a, b) => (b.intensity ?? 0.5) - (a.intensity ?? 0.5))[0];
-        const targetColorHex = topEmotion?.colorHex ?? colorA;
-        const weight = clusterWeights.get(c.key) ?? 0;
-        const pulseIntensity = Math.min(1, weight / Math.max(0.0001, maxClusterWeight));
+        // Keep default cluster visuals independent of incoming emotion responses
+        const targetColorHex = colorA;
+        const pulseIntensity = 0.3;
         const mainRadius = mainRadii[idx];
 
         const base = mainPositions[idx];
@@ -476,20 +633,15 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
         );
 
         // Satellites driven by universe emotions belonging to this cluster (excluding the primary label)
-        const satEmotions = emotions
-          .filter(
-            (e) =>
-              clusterKeyForLabel(e.label) === c.key &&
-              e.label.toLowerCase() !== c.label.toLowerCase()
-          )
-          .sort((a, b) => (b.intensity ?? 0.5) - (a.intensity ?? 0.5));
-        // Fallback to synonyms to avoid empty clusters when there is no universe data
+        // Always render fallback satellites so clusters keep their default structure
+        const satEmotions: any[] = [];
+        // Fallback to synonyms to avoid empty clusters; used regardless of universe data
         const fallbackLabels: string[] = (
           c.synonyms && c.synonyms.length ? c.synonyms : ['s1', 's2', 's3', 's4']
         ).slice(0, 6);
-        const nReal = satEmotions.length;
+        const nReal = 0;
         const nFallback = fallbackLabels.length;
-        const renderFallback = nReal === 0;
+        const renderFallback = true;
 
         const ringR = ringRadii[idx];
         const seed = (idx + 1) * Math.PI * 0.27;
@@ -602,9 +754,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
             orbitPointsList.push(makeOrbitPoints(pos, a, e, theta, eulerSat, layout));
 
             const label = fallbackLabels[i];
-            const eInt =
-              Math.min(1, (clusterWeights.get(c.key) ?? 0) / Math.max(0.0001, maxClusterWeight)) ||
-              0.25;
+            const eInt = 0.35; // fixed subtle pulse independent of universe data
             const eColor = colorA;
             const r = Math.max(0.16, baseR + eInt * 0.12);
 
