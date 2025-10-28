@@ -6,13 +6,12 @@ import PromptInput from '@/features/prompt/PromptInput';
 import LoaderIndicator from './LoaderIndicator';
 // import Vizualizer from '@/scene/dom/Vizualizer';
 
-import { useEmotionEngine } from '@/hooks/useEmotionEngine';
+import { useEmotionCoordinator } from '@/hooks/useEmotionCoordinator';
 
 import { AnimShape, MainRoot } from '@/ui/styles/MainScreen.styled';
 import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
 import { useUniverse } from '@/state/universe.store';
-import { emotionService } from '@/services/EmotionServiceFactory';
 // import config from '@/config/config';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -28,7 +27,7 @@ const MainScreen = () => {
   const controls = useAnimationControls();
   const inputControls = useAnimationControls();
 
-  const { emotion, analyzing } = useEmotionEngine(text, 600);
+  const { emotion, emotions, links, galaxies, analyzing } = useEmotionCoordinator(text, 500);
   const setCurrentEmotion = useEmotionStore((s) => s.setCurrent);
   const setUniverseData = useUniverse((s) => s.setData);
   const thinking = useUIStore((s) => s.thinking);
@@ -40,36 +39,18 @@ const MainScreen = () => {
   // Leva: emotion visuals + transparency monitors
   // Emotion Visuals (v1) removed
 
+  // Sync coordinator outputs to stores and UI thinking flag
   useEffect(() => {
     setCurrentEmotion(emotion ?? null);
   }, [emotion, setCurrentEmotion]);
 
-  // Debounced graph analysis feeding the universe store
   useEffect(() => {
-    if (!text || !text.trim()) {
-      setThinking(false);
-      return;
-    }
+    setUniverseData({ emotions, links, galaxies });
+  }, [emotions, links, galaxies, setUniverseData]);
 
-    let cancelled = false;
-    const timer = globalThis.setTimeout(async () => {
-      try {
-        setThinking(true);
-        const { emotions, links, galaxies } = await emotionService.analyzeToGraph(text);
-        if (!cancelled) setUniverseData({ emotions, links, galaxies });
-      } catch (err) {
-        // non-fatal: keep previous universe data but surface in devtools
-        console.warn('[Canvas] analyzeToGraph failed', err);
-      } finally {
-        if (!cancelled) setThinking(false);
-      }
-    }, 450);
-
-    return () => {
-      cancelled = true;
-      globalThis.clearTimeout(timer);
-    };
-  }, [text, setUniverseData, setThinking]);
+  useEffect(() => {
+    setThinking(analyzing);
+  }, [analyzing, setThinking]);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);

@@ -1,6 +1,6 @@
 # creativedev.ai-emotion
 
-“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes y micro-animaciones en DOM, y una galaxia R3F de emociones con enlaces “energéticos”, intro animada, audio interactivo, un planeta con texturas PBR y un Planeta Blend de primarias con efectos en tiempo real (Watercolor y Oil).
+“Lo que sientes al escribir, lo ves moverse”. El texto se analiza en tiempo real y se traduce a visuales: gradientes y micro-animaciones en DOM, y una galaxia R3F de emociones con enlaces “energéticos”, intro animada, audio interactivo, un planeta con texturas PBR y un Planeta Blend de primarias con efectos en tiempo real (Watercolor, Oil, Link, Holographic y Voronoi).
 
 ## Project at a glance
 
@@ -49,7 +49,7 @@ Sin clave, el motor usa heurística local. Con clave, puedes forzar `VITE_EMOTIO
   - Intro animada por etapas (planetas → satélites → órbitas → enlaces).
   - Audio: soundtrack ambiental + SFX en hover por planeta. Leva para ajustar volúmenes.
   - Texturas PBR para un solo planeta configurable (albedo/normal/roughness/AO/metalness/height).
-  - Planeta Blend de primarias: shader paramétrico que mezcla colores de emociones activas y aplica efectos seleccionables en Leva (Watercolor | Oil).
+  - Planeta Blend de primarias: shader paramétrico que mezcla colores de emociones activas y aplica efectos seleccionables en Leva (Watercolor | Oil | Link | Holographic | Voronoi).
 
 ## Configuración clave
 
@@ -71,7 +71,7 @@ Config: `src/config/config.ts`, `src/config/emotion-presets.ts`, `src/config/emo
 - Heurística local: `src/ai/local-emotions.ts`.
 Estado: `src/state/universe.store.ts` (dominio), `src/stores/*` (UI stores). R3F consume `useUniverse`.
 
-- Hooks: `src/hooks/useEmotionEngine.ts`, `src/hooks/useVisualLeva.ts`, `src/hooks/useAudioLeva.ts`, `src/hooks/useBlendLeva.ts`, `src/hooks/useEmotionVisuals2.ts`.
+- Hooks: `src/hooks/useEmotionCoordinator.ts` (análisis unificado + debounce), `src/hooks/useVisualLeva.ts`, `src/hooks/useAudioLeva.ts`, `src/hooks/useBlendLeva.ts`, `src/hooks/useEmotionVisuals2.ts`.
 - R3F: `src/scene/r3f/R3FCanvas.tsx`, `src/scene/r3f/ClustersScene.tsx`, `src/scene/r3f/UniverseScene.tsx`.
 - R3F objetos/utils: `src/scene/r3f/objects/Planets.tsx`, `src/scene/r3f/objects/Orbits.tsx`, `src/scene/r3f/utils/*`.
 - DOM: `src/scene/dom/Vizualizer.tsx`, `src/ui/components/*`.
@@ -86,10 +86,13 @@ Estado: `src/state/universe.store.ts` (dominio), `src/stores/*` (UI stores). R3F
 Controles visuales (Leva):
 
 - Emotion Visuals 2.0
-  - effect: `Watercolor | Oil`
+  - effect: `Watercolor | Oil | Link | Holographic | Voronoi`
   - Watercolor: `wcWash`, `wcScale`, `wcSharpness`, `wcFlow`
   - Oil: `oilSwirl`, `oilScale`, `oilFlow`, `oilShine`, `oilContrast`
-  - Global: `spinSpeed`, `bounce`, `useTextureColor`, `textureColor`
+  - Link: `linkDensity`, `linkThickness`, `linkNoise`, `linkFlow`, `linkContrast`
+  - Holographic: `holoIntensity`, `holoFresnel`, `holoDensity`, `holoThickness`, `holoSpeed`
+  - Voronoi: `voroScale`, `voroSoft`, `voroFlow`, `voroJitter`, `voroEdge`, `voroContrast`
+  - Global: `spinSpeed`, `bounce`
 - Visuals / Blend Planet: `quality` (ajusta `segments` y `sharpness`)
 - Visuals / Post: Bloom, Noise, Vignette, Chromatic Aberration
 

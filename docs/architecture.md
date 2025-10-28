@@ -12,21 +12,23 @@ La app convierte texto en visuales reactivos (DOM y WebGL) en función de emocio
 ## Flujo de extremo a extremo
 
 1. Usuario escribe en el input (`features/prompt/PromptInput.tsx`).
-2. Hay dos caminos en paralelo:
 
-- UI inmediata: `useEmotionEngine` publica una emoción dominante al store para feedback DOM rápido (gradientes, micro-animaciones).
+2. Análisis unificado: `useEmotionCoordinator` (debounce + cancel) invoca `emotionService.analyzeToGraph(text)` una sola vez y deriva:
 
-- Universo 3D: `emotionService.analyzeToGraph` genera un grafo de emociones (nodos + enlaces + galaxias) y lo publica para R3F.
+- `emotion` primaria (por `intensity` o `meta.score`)
+- `{ emotions, links, galaxies }` para la escena R3F
 
-1. DOM: `Vizualizer` usa `emotion-presets` para colorear y mover según la emoción.
-2. WebGL: `ClustersScene` es la escena principal (planetas/satélites/enlaces y Planeta Blend); `UniverseScene` queda como alternativa.
+3) El componente sincroniza stores: `useEmotionStore.setCurrent(emotion)` y `useUniverse.setData({ emotions, links, galaxies })`, además de `useUIStore.setThinking(analyzing)`.
+
+4) DOM: `Vizualizer` aplica `emotion-presets`.
+
+5) WebGL: `ClustersScene` renderiza planetas/satélites/enlaces y el Planeta Blend.
 
 ```mermaid
 flowchart LR
-  A[PromptInput] -- text --> B[useEmotionEngine]
-  A -- text --> C[emotionService.analyzeToGraph]
-  B -- Emotion --> D[Vizualizer (DOM)]
-  C -- {emotions,links,galaxies} --> E[ClustersScene/UniverseScene (R3F)]
+  A[PromptInput] -- text --> B[useEmotionCoordinator]
+  B -- emotion --> D[Vizualizer (DOM)]
+  B -- {emotions,links,galaxies} --> E[ClustersScene/UniverseScene (R3F)]
 ```
 
 ## Modo de análisis (factory)
@@ -77,10 +79,13 @@ flowchart LR
 
 - `PrimaryBlendPlanet` (en `objects/Planets.tsx`) combina hasta 12 colores de emociones activas.
 - Controles en Leva (hook `useEmotionVisuals2.ts`):
-  - effect: `Watercolor | Oil`
+  - effect: `Watercolor | Oil | Link | Holographic | Voronoi`
   - Watercolor: `wcWash`, `wcScale`, `wcSharpness`, `wcFlow`
   - Oil: `oilSwirl`, `oilScale`, `oilFlow`, `oilShine`, `oilContrast`
-  - Global: `spinSpeed`, `bounce`, `useTextureColor`, `textureColor`
+  - Link: `linkDensity`, `linkThickness`, `linkNoise`, `linkFlow`, `linkContrast`
+  - Holographic: `holoIntensity`, `holoFresnel`, `holoDensity`, `holoThickness`, `holoSpeed`
+  - Voronoi: `voroScale`, `voroSoft`, `voroFlow`, `voroJitter`, `voroEdge`, `voroContrast`
+  - Global: `spinSpeed`, `bounce`
 - Calidad del Planeta Blend (hook `useBlendLeva.ts`): `quality` → `segments`/`sharpness`.
 - Nebula: eliminada. PostFX se controla desde `useVisualLeva`.
 
