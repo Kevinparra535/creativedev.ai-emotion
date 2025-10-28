@@ -294,7 +294,9 @@ export function PrimaryBlendPlanet({
   thinking = false,
   thinkingBlink = 0,
   pulseIntensity = 0,
-  targetColorHex
+  targetColorHex,
+  segments = 128,
+  sharpness = 2.2
 }: Readonly<{
   position: THREE.Vector3 | [number, number, number];
   colors: string[]; // hex colors to blend
@@ -309,6 +311,8 @@ export function PrimaryBlendPlanet({
   thinkingBlink?: number;
   pulseIntensity?: number;
   targetColorHex?: string;
+  segments?: number;
+  sharpness?: number;
 }>) {
   const pos = Array.isArray(position) ? position : position.toArray();
   const n = Math.max(0, Math.min(12, colors.length));
@@ -340,9 +344,10 @@ export function PrimaryBlendPlanet({
       // extra effects
       uBrightness: { value: emissiveIntensity },
       uTargetColor: { value: new THREE.Vector3(1, 1, 1) },
-      uTargetMix: { value: 0 }
+      uTargetMix: { value: 0 },
+      uSharpness: { value: sharpness }
     } as Record<string, any>;
-  }, [palette, n, emissiveIntensity]);
+  }, [palette, n, emissiveIntensity, sharpness]);
 
   // Update colors if palette changes
   useMemo(() => {
@@ -371,6 +376,9 @@ export function PrimaryBlendPlanet({
         Math.sin(tRef.current * Math.max(0.001, freq)) * 0.06 * Math.max(0, pulseIntensity);
       const s = radius * (1 + Math.sin(tRef.current * 2.2) * amp + micro);
       meshRef.current.scale.set(s, s, s);
+      // constant spin: full 360° every ~24s
+      const spinPeriodSec = 24;
+      meshRef.current.rotation.y += ((Math.PI * 2) / spinPeriodSec) * delta;
     }
     // Compute brightness like Planet's emissive flow (without halo)
     const dimBase = 0.008;
@@ -420,6 +428,7 @@ export function PrimaryBlendPlanet({
     uniform float uBrightness;
     uniform vec3 uTargetColor;
     uniform float uTargetMix;
+    uniform float uSharpness;
 
     // Hash/Noise helpers
     float hash(vec2 p){
@@ -460,8 +469,8 @@ export function PrimaryBlendPlanet({
         float phase = float(i)*1.618 + t*0.9;
         float n = fbm(p*1.3 + vec2(cos(phase), sin(phase))*0.6);
         float w = smoothstep(0.35, 0.95, 0.5 + 0.5*sin(6.2831*n + phase));
-        // emphasize a few colors per fragment
-        w = pow(w, 2.2);
+        // emphasize a few colors per fragment (controlled)
+        w = pow(w, max(1.0, uSharpness));
         acc += getColor(i) * w;
         wsum += w;
       }
@@ -502,7 +511,7 @@ export function PrimaryBlendPlanet({
       }
     >
       <mesh ref={meshRef} castShadow receiveShadow>
-        <sphereGeometry args={[1, 128, 128]} />
+        <sphereGeometry key={`blend-${segments}`} args={[1, Math.max(16, segments), Math.max(12, Math.round(segments*0.75))]} />
         <shaderMaterial
           ref={matRef as any}
           uniforms={uniforms}
