@@ -1,4 +1,4 @@
-import { useVisualLeva } from '@/hooks/useVisualLeva';
+import type { ReactElement } from 'react';
 import {
   Bloom,
   ChromaticAberration,
@@ -6,8 +6,9 @@ import {
   Noise,
   Vignette
 } from '@react-three/postprocessing';
-import type { ReactElement } from 'react';
 import { Vector2 } from 'three';
+
+import { useVisualLeva } from '@/hooks/useVisualLeva';
 
 const PostFX = () => {
   const { post } = useVisualLeva();

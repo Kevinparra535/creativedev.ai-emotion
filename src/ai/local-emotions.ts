@@ -36,7 +36,7 @@ export interface Emotion {
 // -----------------------------
 // Helpers
 // -----------------------------
-import { getCluster, clusterKeyForLabel } from '@/config/emotion-clusters';
+import { clusterKeyForLabel,getCluster } from '@/config/emotion-clusters';
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const clampRange = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const hexOk = (h: string) => /^#([0-9A-Fa-f]{6})$/.test(h);

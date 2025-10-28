@@ -1,4 +1,5 @@
 import styled, { keyframes } from 'styled-components';
+
 import { fonts, spacing } from './scssTokens';
 
 // Wrapper to stack highlights behind the textarea

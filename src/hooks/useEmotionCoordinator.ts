@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+
 import type { Emotion } from '@/domain/emotion';
-import type { Link } from '@/domain/link';
 import type { Galaxy } from '@/domain/galaxy';
+import type { Link } from '@/domain/link';
 import { emotionService } from '@/services/EmotionServiceFactory';
 
 export type CoordResult = {

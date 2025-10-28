@@ -1,15 +1,16 @@
 import config from '@/config/config';
+import { clusterKeyForLabel } from '@/config/emotion-clusters';
+
+import { buildPayloadFromText, localHeuristic } from '@/ai/local-emotions';
+import { mapAIToDomain } from '@/data/mappers';
 import type { Emotion } from '@/domain/emotion';
-import type { Link } from '@/domain/link';
 import type { Galaxy } from '@/domain/galaxy';
-import { GraphBuilder } from '@/systems/GraphBuilder';
+import type { Link } from '@/domain/link';
+import { OpenIAAdapter } from '@/services/OpenIAAdapter';
 import { clusterByPrimaries } from '@/systems/ClusterEngine';
+import { GraphBuilder } from '@/systems/GraphBuilder';
 import { RuleEngine } from '@/systems/RuleEngine';
 import { EnergyRules } from '@/systems/rules/EnergyRules';
-import { mapAIToDomain } from '@/data/mappers';
-import { buildPayloadFromText, localHeuristic } from '@/ai/local-emotions';
-import { OpenIAAdapter } from '@/services/OpenIAAdapter';
-import { clusterKeyForLabel } from '@/config/emotion-clusters';
 
 type EmotionGraphResult = Promise<{ emotions: Emotion[]; links: Link[]; galaxies: Galaxy[] }>;
 

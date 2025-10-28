@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import type { UniverseGraph } from '@/services/universeGraph';
 
 export type UniverseState = {

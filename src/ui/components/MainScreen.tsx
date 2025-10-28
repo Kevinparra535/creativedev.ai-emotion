@@ -1,19 +1,19 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
+import { type ChangeEvent,useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAnimationControls } from 'framer-motion';
+
 import { useAudioLeva } from '@/hooks/useAudioLeva';
-
-import PromptInput from '@/features/prompt/PromptInput';
-import LoaderIndicator from './LoaderIndicator';
 // import Vizualizer from '@/scene/dom/Vizualizer';
-
 import { useEmotionCoordinator } from '@/hooks/useEmotionCoordinator';
 
-import { AnimShape, MainRoot } from '@/ui/styles/MainScreen.styled';
-import { spacing } from '../styles/scssTokens';
 import { useEmotionStore } from '@/stores/emotionStore';
-import { useUniverse } from '@/state/universe.store';
 // import config from '@/config/config';
 import { useUIStore } from '@/stores/uiStore';
+
+import { spacing } from '../styles/scssTokens';
+import LoaderIndicator from './LoaderIndicator';
+import PromptInput from '@/features/prompt/PromptInput';
+import { useUniverse } from '@/state/universe.store';
+import { AnimShape, MainRoot } from '@/ui/styles/MainScreen.styled';
 
 const MainScreen = () => {
   const [text, setText] = useState('');

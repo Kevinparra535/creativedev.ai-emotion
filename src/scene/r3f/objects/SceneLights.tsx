@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
-import { useUniverse } from '@/state/universe.store';
 import { useUIStore } from '@/stores/uiStore';
+
+import { useUniverse } from '@/state/universe.store';
 
 const SceneLights = () => {
   const thinking = useUIStore((s) => s.thinking);

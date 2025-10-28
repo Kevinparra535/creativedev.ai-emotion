@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+
 import type { Emotion } from '@/domain/emotion';
 import { analyzeText } from '@/services/universeGraph';
 

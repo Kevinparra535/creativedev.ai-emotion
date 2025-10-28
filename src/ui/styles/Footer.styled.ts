@@ -1,6 +1,7 @@
 import styled, { keyframes } from 'styled-components';
-import { spacing, colors } from './scssTokens';
+
 import { cssVariables } from './base';
+import { colors,spacing } from './scssTokens';
 
 const slideUp = keyframes`
   from { transform: translateY(20px); opacity: 0; }

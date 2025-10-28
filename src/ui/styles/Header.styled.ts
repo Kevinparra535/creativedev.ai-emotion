@@ -1,4 +1,5 @@
 import styled, { keyframes } from 'styled-components';
+
 import { cssVariables } from '@/ui/styles/base';
 
 const slideDown = keyframes`

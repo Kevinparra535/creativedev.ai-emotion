@@ -1,6 +1,6 @@
+import type { AIEmotionPayload } from './schemas';
 import type { Emotion } from '@/domain/emotion';
 import type { Link, LinkKind } from '@/domain/link';
-import type { AIEmotionPayload } from './schemas';
 
 export function mapAIToDomain(input: AIEmotionPayload): { emotions: Emotion[]; links: Link[] } {
   console.log('Mapping AI payload to domain model...', input);

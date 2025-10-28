@@ -19,8 +19,7 @@ export type MultiEmotionResult = {
   pairs?: [string, string][]; // co-occurrence or semantic relations
 };
 
-export const promptToService = (): { role: string; content: string } => {
-  return {
+export const promptToService = (): { role: string; content: string } => ({
     role: 'system',
     content: [
       'Eres un analizador emocional. Responde ÚNICAMENTE con JSON válido UTF-8 sin comentarios ni texto extra.',
@@ -61,11 +60,9 @@ export const promptToService = (): { role: string; content: string } => {
       '- No incluyas campos adicionales fuera del esquema.',
       '- Responde SOLO el JSON (sin markdown, sin explicación).'
     ].join('\n')
-  };
-};
+  });
 
-export const promptToUser = (text: string) => {
-  return {
+export const promptToUser = (text: string) => ({
     role: 'user',
     content: [
       'Analiza el siguiente texto y devuelve el JSON según el esquema indicado.',
@@ -77,8 +74,7 @@ export const promptToUser = (text: string) => {
       '',
       `Texto: ${text}`
     ].join('\n')
-  };
-};
+  });
 
 // Permissive single-emotion parsing result (upstream adapter will normalize)
 export type LooseEmotion = {

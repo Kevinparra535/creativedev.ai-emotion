@@ -1,8 +1,9 @@
 import { create } from "zustand";
+
 import type { Emotion } from "@/domain/emotion";
 import type { Galaxy } from "@/domain/galaxy";
-import type { Link } from "@/domain/link";
 import type { LayoutConfig } from "@/domain/layout";
+import type { Link } from "@/domain/link";
 
 interface UniverseState {
   emotions: Emotion[];

@@ -1,15 +1,15 @@
 import {
   forwardRef,
+  type TextareaHTMLAttributes,
+  useCallback,
   useEffect,
   useImperativeHandle,
-  useCallback,
   useMemo,
-  useRef,
-  type TextareaHTMLAttributes
-} from 'react';
+  useRef} from 'react';
 
-import { HighlightWrapper, HighlightsLayer, InputFieldRoot } from '@/ui/styles/InputField.styled';
 import { getPresetForEmotion } from '@/config/emotion-presets';
+
+import { HighlightsLayer, HighlightWrapper, InputFieldRoot } from '@/ui/styles/InputField.styled';
 
 type Props = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   maxAutoHeight?: number; // px, default 200

@@ -1,5 +1,5 @@
-import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
+import * as THREE from 'three';
 
 export type PlanetTextureSet = {
   map?: THREE.Texture;

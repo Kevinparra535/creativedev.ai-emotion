@@ -1,7 +1,8 @@
-import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { useMemo,useRef } from 'react';
 import { Line } from '@react-three/drei';
-import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+
 import { Planet, type PlanetProps, PrimaryBlendPlanet } from '../objects/Planets';
 import type { ClustersLayout } from '@/utils/sceneUtils';
 

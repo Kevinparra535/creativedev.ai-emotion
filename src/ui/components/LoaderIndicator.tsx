@@ -1,26 +1,26 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence,motion } from 'framer-motion';
 import styled from 'styled-components';
+
 import { fontSize, spacing } from '../styles/scssTokens';
 
 type Props = {
   reading: boolean;
 };
 
-const LoaderIndicator = ({ reading = true }: Props) => {
-  return (
-    <AnimatePresence>
-      {reading && (
-        <Indicator
+const LoaderIndicator = ({ reading = true }: Props) => (
+  <AnimatePresence>
+    {reading && (
+    <Indicator
           aria-live='polite'
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 4 }}
           transition={{ duration: 0.2 }}
         >
-          <span>Feeling</span>
-          <Dots aria-hidden='true'>
-            {[0, 1, 2].map((i) => (
-              <Dot
+      <span>Feeling</span>
+      <Dots aria-hidden='true'>
+        {[0, 1, 2].map((i) => (
+          <Dot
                 key={i}
                 animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
                 transition={{
@@ -31,12 +31,11 @@ const LoaderIndicator = ({ reading = true }: Props) => {
                 }}
               />
             ))}
-          </Dots>
-        </Indicator>
+      </Dots>
+    </Indicator>
       )}
-    </AnimatePresence>
+  </AnimatePresence>
   );
-};
 
 const Indicator = styled(motion.output)`
   position: absolute;

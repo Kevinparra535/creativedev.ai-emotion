@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import { getPresetForEmotion } from '@/config/emotion-presets';
+
 import type { Emotion } from '@/domain/emotion';
 
 export const ColorEngine = {

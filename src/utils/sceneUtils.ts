@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+
 import type { ClusterDef } from '@/config/emotion-clusters';
 import { clusterToEmotion } from '@/config/emotion-clusters';
-import type { Link } from '@/domain/link';
+
 import type { Emotion } from '@/domain/emotion';
+import type { Link } from '@/domain/link';
 import { RuleEngine } from '@/systems/RuleEngine';
 import { EnergyRules } from '@/systems/rules/EnergyRules';
 

@@ -1,6 +1,7 @@
+import { clusterKeyForLabel,getClusters } from '@/config/emotion-clusters';
+
 import type { Emotion } from '@/domain/emotion';
 import type { Galaxy } from '@/domain/galaxy';
-import { getClusters, clusterKeyForLabel } from '@/config/emotion-clusters';
 
 export type AffectDefaults = Record<string, { valence: number; arousal: number; colors?: string[] }>
 

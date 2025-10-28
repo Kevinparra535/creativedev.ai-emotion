@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
-import { GrainOverlay, VizualiserRoot } from '@/ui/styles/Vizualiser.styled';
+
 import { getPresetForEmotion } from '@/config/emotion-presets';
+
 import type { Emotion } from '@/domain/emotion';
+import { GrainOverlay, VizualiserRoot } from '@/ui/styles/Vizualiser.styled';
 
 type Props = {
   emotion: Emotion | null;

@@ -1,5 +1,5 @@
-import type { Emotion } from '@/domain/emotion';
 import { expandFromDominant, type MultiEmotionResult } from '@/ai/local-emotions';
+import type { Emotion } from '@/domain/emotion';
 import { emotionService } from '@/services/EmotionServiceFactory';
 import { AFFECT_DEFAULTS } from '@/systems/ClusterEngine';
 

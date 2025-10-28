@@ -1,5 +1,6 @@
-import type { Emotion } from '@/domain/emotion';
 import { create } from 'zustand';
+
+import type { Emotion } from '@/domain/emotion';
 
 export type EmotionState = {
   current: Emotion | null;

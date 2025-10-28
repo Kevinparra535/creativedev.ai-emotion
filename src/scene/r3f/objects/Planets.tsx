@@ -1,10 +1,11 @@
-import * as THREE from 'three';
 import { useMemo, useRef, useState } from 'react';
 import { Text, useCursor } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 
 import config from '@/config/config';
-import { usePlanetTexturePack } from '../utils/planetTextures';
+
+import { usePlanetTexturePack } from '../../../utils/planetTextures';
 import AudioManager from '@/audio/AudioManager';
 
 export type PlanetProps = {

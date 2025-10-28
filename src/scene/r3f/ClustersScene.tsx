@@ -1,32 +1,30 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
-import * as THREE from 'three';
+import { useEffect,useMemo, useRef, useState } from 'react';
 import { Line } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
-import { getClusters, clusterKeyForLabel } from '@/config/emotion-clusters';
-
-import {
-  makeOrbitPoints,
-  makeArcPoints,
-  gradientColors,
-  linkWidthForKind,
-  relaxMainPositions,
-  computePrimaryEnergyLinks,
-  jitterZ,
-  type ClustersLayout as UtilLayout,
-  type EnergyLinkAgg
-} from '@/utils/sceneUtils';
-
-import { Planet, EnergyPulse, PrimaryBlendPlanet } from './objects/Planets';
-import { OrbitingSatellite, OrbitLine, BlendOrbitingSatellite } from './objects/Orbits';
-
-import { useUniverse } from '@/state/universe.store';
 import { useBlendLeva } from '@/hooks/useBlendLeva';
 import { useEmotionVisuals2 } from '@/hooks/useEmotionVisuals2';
+
 import { useUIStore } from '@/stores/uiStore';
 
 import config from '@/config/config';
+import { clusterKeyForLabel,getClusters } from '@/config/emotion-clusters';
+
+import { BlendOrbitingSatellite,OrbitingSatellite, OrbitLine } from './objects/Orbits';
+import { EnergyPulse, Planet, PrimaryBlendPlanet } from './objects/Planets';
 import AudioManager from '@/audio/AudioManager';
+import { useUniverse } from '@/state/universe.store';
+import {
+  type ClustersLayout as UtilLayout,
+  computePrimaryEnergyLinks,
+  type EnergyLinkAgg,
+  gradientColors,
+  jitterZ,
+  linkWidthForKind,
+  makeArcPoints,
+  makeOrbitPoints,
+  relaxMainPositions} from '@/utils/sceneUtils';
 
 export type ClustersLayout = UtilLayout;
 export type PairProps = Map<
@@ -390,9 +388,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
   }, [emotions, clusters, mainPositions, intro.tPlanet]);
 
   // Reset the blend appear animation when the emotion mix changes significantly
-  const blendKey = useMemo(() => {
-    return blend ? `${blend.colors.join('|')}|${blend.label}` : '';
-  }, [blend]);
+  const blendKey = useMemo(() => blend ? `${blend.colors.join('|')}|${blend.label}` : '', [blend]);
 
   useEffect(() => {
     if (!blend) return;

@@ -1,14 +1,14 @@
-import { Canvas, extend, useFrame } from '@react-three/fiber';
-import { Suspense, useMemo, useRef, useEffect } from 'react';
-import { UnrealBloomPass } from 'three-stdlib';
+import { Suspense, useMemo } from 'react';
+import { CameraShake, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
+import { Canvas, extend } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CameraControls, CameraShake, PerspectiveCamera, Stars, Stats } from '@react-three/drei';
+import { UnrealBloomPass } from 'three-stdlib';
 
 import ClustersScene from './ClustersScene';
-import { useUIStore } from '@/stores/uiStore';
-import SceneLights from './objects/SceneLights';
 import PostFX from './components/PostFX';
 import BackgroundTone from './objects/BackgroundTone';
+import CameraRig from './objects/CameraRig';
+import SceneLights from './objects/SceneLights';
 
 extend({ UnrealBloomPass });
 
@@ -55,34 +55,4 @@ const R3FCanvas = () => {
   );
 };
 
-function CameraRig() {
-  const controlsRef = useRef<any>(null);
-  const focus = useUIStore((s) => s.cameraFocus);
-  const clear = useUIStore((s) => s.clearFocus);
-
-  // Render controls
-  // Note: we render CameraControls and react to store to drive setLookAt
-  useFrame(() => {
-    // noop, ensure hook keeps running
-  });
-
-  // Respond to focus requests
-  useEffect(() => {
-    if (!focus || !controlsRef.current) return;
-    const ctrls = controlsRef.current as import('@react-three/drei').CameraControls;
-    const [tx, ty, tz] = focus.target;
-    const dist = typeof focus.distance === 'number' ? Math.max(2, focus.distance) : 12;
-    // Position the camera on the +Z axis looking at target
-    const px = tx;
-    const py = ty;
-    const pz = tz + dist;
-    // Smooth move
-    ctrls.setLookAt(px, py, pz, tx, ty, tz, true);
-    // optional: damp more strongly
-    // ctrls.smoothTime = 0.8;
-    clear();
-  }, [focus, clear]);
-
-  return <CameraControls ref={controlsRef as any} maxDistance={100} />;
-}
 export default R3FCanvas;

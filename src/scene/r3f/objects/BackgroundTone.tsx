@@ -1,7 +1,8 @@
-import * as THREE from 'three';
-import { useUniverse } from '@/state/universe.store';
-import { useThree, useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
+import { useFrame,useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+
+import { useUniverse } from '@/state/universe.store';
 
 const BackgroundTone = () => {
   const { gl } = useThree();

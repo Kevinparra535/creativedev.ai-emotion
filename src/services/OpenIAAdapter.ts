@@ -1,14 +1,16 @@
+import type { z } from 'zod';
+
 import config from '@/config/config';
+import { clusterKeyForLabel } from '@/config/emotion-clusters';
+
+import { expandFromDominant, localHeuristic } from '@/ai/local-emotions';
+import { mapAIToDomain } from '@/data/mappers';
 import type { Emotion } from '@/domain/emotion';
 import type { Link } from '@/domain/link';
 import { GraphBuilder } from '@/systems/GraphBuilder';
-import { clusterKeyForLabel } from '@/config/emotion-clusters';
 import { RuleEngine } from '@/systems/RuleEngine';
-import { mapAIToDomain } from '@/data/mappers';
 import { promptToService, promptToUser, tryParseEmotion, tryParseMulti } from '@/utils/iaUtiils';
 import { PayloadZ } from '@/utils/validators';
-import type { z } from 'zod';
-import { expandFromDominant, localHeuristic } from '@/ai/local-emotions';
 
 function tryParseZodPayload(content: string): z.infer<typeof PayloadZ> | null {
   try {
