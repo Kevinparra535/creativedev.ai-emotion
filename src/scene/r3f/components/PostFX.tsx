@@ -8,10 +8,13 @@ import {
 } from '@react-three/postprocessing';
 import { Vector2 } from 'three';
 
+import { useCaptureLeva } from '@/hooks/useCaptureLeva';
 import { useVisualLeva } from '@/hooks/useVisualLeva';
 
 const PostFX = () => {
   const { post } = useVisualLeva();
+  // Register capture buttons in Leva (no visual output)
+  useCaptureLeva();
   const children: ReactElement[] = [];
   if (post.bloomEnabled) {
     children.push(

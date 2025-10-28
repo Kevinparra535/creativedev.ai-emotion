@@ -386,7 +386,7 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     const intensity = Math.min(1, totalIntensity / Math.max(1, emotions.length));
     const label = cols.length ? '' : '';
     return { colors: cols, pos, label, intensity };
-  }, [emotions, clusters, mainPositions, intro.tPlanet]);
+  }, [emotions, clusters, intro.tPlanet]);
 
   // Reset the blend appear animation when the emotion mix changes significantly
   const blendKey = useMemo(
@@ -400,6 +400,8 @@ export default function ClustersScene(props: Readonly<{ layout?: ClustersLayout 
     blendAppearStartRef.current = null;
     blendAnimActiveRef.current = false;
     blendSoundPlayedRef.current = false;
+    // Allow camera to refocus on each new blend payload
+    didFocusRef.current = false;
     // also reset scale immediately
     if (blendGroupRef.current) {
       blendGroupRef.current.scale.set(0.001, 0.001, 0.001);

@@ -29,7 +29,9 @@ const R3FCanvas = () => {
       gl={{
         antialias: true,
         alpha: true,
-        powerPreference: 'high-performance'
+        powerPreference: 'high-performance',
+        // Enable stable screenshots via toDataURL()
+        preserveDrawingBuffer: true
       }}
       camera={{ fov: 45, near: 0.1, far: 100, position: [0, 0, 100] }}
       frameloop='always'
