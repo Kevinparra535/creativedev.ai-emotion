@@ -2,7 +2,7 @@
 
 **Visión:** Una experiencia interactiva donde cada palabra cobra vida. El usuario escribe un texto y la IA traduce su emoción en color, movimiento y ritmo visual.
 
-### El objetivo:
+### El objetivo
 
 conectar lenguaje, emoción y visualidad en tiempo real.
 
@@ -25,7 +25,6 @@ Creative Technologist — ideación, diseño, desarrollo y narrativa visual.
 El proyecto comenzó con una pregunta simple:
 
 > **“¿Cómo se vería una emoción si pudiera ser un fondo animado?”**
-> 
 
 Inspiraciones:
 
@@ -42,9 +41,9 @@ Inspiraciones:
 
 ![image.png](attachment:14b3ca26-80a2-4001-8d25-19f7d6b7589f:image.png)
 
-### Boceto inicial:
+### Boceto inicial
 
-![IMG_6457 (1).jpg](attachment:3c7be3fc-87d5-4ccf-8843-47ad79f7c163:IMG_6457_(1).jpg)
+![IMG_6457 (1).jpg](<attachment:3c7be3fc-87d5-4ccf-8843-47ad79f7c163:IMG_6457_(1).jpg>)
 
 ## **Emotion System Design**
 
@@ -55,20 +54,20 @@ El núcleo del proyecto es un motor de mapeo emocional que transforma el texto e
 - Arousal (energía)
 - Color palette, motion profile, particle density
 
-| Emotion | Palette | Motion | Keywords |
-| --- | --- | --- | --- |
-| Alegría | #FFD93D → #FF6B00 | Expansiva, suave | “alegría”, “feliz”, “sol”, “calor” |
-| Calma | #2DD4BF → #3B82F6 | Flotante, lenta | “paz”, “quietud”, “sereno”, “still” |
-| Ira | #FF2E63 → #D00000 | Pulsante, abrupta | “rabia”, “fuego”, “enfado”, “romper” |
-| Tristeza | #60A5FA → #1E293B | Caída, densa | “triste”, “llanto”, “solo”, “vacío” |
-| Miedo | #7C3AED → #111827 | Temblorosa, retraída | “miedo”, “pánico”, “sombra”, “amenaza” |
-| Ansiedad | #06B6D4 → #7C3AED | Agitada, micro‑vibración | “ansiedad”, “nervioso”, “worry”, “estresado” |
-| Amor | #FF4D6D → #F72585 | Latido, envolvente | “amor”, “cariño”, “abrazo”, “affection” |
-| Esperanza | #A7F3D0 → #22C55E | Ascendente, ligera | “esperanza”, “luz”, “nuevo”, “brota” |
-| Asombro | #FDE68A → #8B5CF6 | Explosiva, elástica | “wow”, “asombro”, “sorprende”, “maravilla” |
-| Asco | #84CC16 → #4D7C0F | Ondulante, viscosa | “asco”, “repulsión”, “sucio”, “toxic” |
-| Melancolía | #60A5FA → #94A3B8 | Mecida, nostálgica | “melancolía”, “recuerdo”, “nostalgia” |
-| Enfoque | #38BDF8 → #10B981 | Estable, orbital | “focus”, “concentrar”, “flujo”, “profundo” |
+| Emotion    | Palette           | Motion                   | Keywords                                     |
+| ---------- | ----------------- | ------------------------ | -------------------------------------------- |
+| Alegría    | #FFD93D → #FF6B00 | Expansiva, suave         | “alegría”, “feliz”, “sol”, “calor”           |
+| Calma      | #2DD4BF → #3B82F6 | Flotante, lenta          | “paz”, “quietud”, “sereno”, “still”          |
+| Ira        | #FF2E63 → #D00000 | Pulsante, abrupta        | “rabia”, “fuego”, “enfado”, “romper”         |
+| Tristeza   | #60A5FA → #1E293B | Caída, densa             | “triste”, “llanto”, “solo”, “vacío”          |
+| Miedo      | #7C3AED → #111827 | Temblorosa, retraída     | “miedo”, “pánico”, “sombra”, “amenaza”       |
+| Ansiedad   | #06B6D4 → #7C3AED | Agitada, micro‑vibración | “ansiedad”, “nervioso”, “worry”, “estresado” |
+| Amor       | #FF4D6D → #F72585 | Latido, envolvente       | “amor”, “cariño”, “abrazo”, “affection”      |
+| Esperanza  | #A7F3D0 → #22C55E | Ascendente, ligera       | “esperanza”, “luz”, “nuevo”, “brota”         |
+| Asombro    | #FDE68A → #8B5CF6 | Explosiva, elástica      | “wow”, “asombro”, “sorprende”, “maravilla”   |
+| Asco       | #84CC16 → #4D7C0F | Ondulante, viscosa       | “asco”, “repulsión”, “sucio”, “toxic”        |
+| Melancolía | #60A5FA → #94A3B8 | Mecida, nostálgica       | “melancolía”, “recuerdo”, “nostalgia”        |
+| Enfoque    | #38BDF8 → #10B981 | Estable, orbital         | “focus”, “concentrar”, “flujo”, “profundo”   |
 
 ![image.png](attachment:457b5ca9-9ace-4d17-ba47-bf92078e259f:image.png)
 
@@ -79,12 +78,12 @@ Aplicación modular React + R3F centrada en un pipeline de análisis emocional q
 - Stack: React 19 + TypeScript + Vite 7 (SWC). Alias: @ → src.
 - Entrypoint: main.tsx → src/App.tsx. Integración de la UI en ui/components/MainScreen.tsx.
 - Input → análisis → mapeo → visualización:
-    - features/prompt/PromptInput.tsx
-    - hooks/useEmotionCoordinator (debounce 350–450 ms + cancelación) orquesta stores UI y dominio.
-    - services/EmotionServiceFactory selecciona OpenIAAdapter (online) o ai/local-emotions (offline).
-    - data/mappers.ts normaliza a grafo; systems/GraphBuilder + RuleEngine + ClusterEngine ajustan pesos, reglas y clusters.
-    - DOM: scene/dom/Vizualizer.tsx aplica presets.
-    - WebGL: scene/r3f/R3FCanvas.tsx + scene/r3f/ClustersScene.tsx renderizan planetas, enlaces y Planeta Blend.
+  - features/prompt/PromptInput.tsx
+  - hooks/useEmotionCoordinator (debounce 350–450 ms + cancelación) orquesta stores UI y dominio.
+  - services/EmotionServiceFactory selecciona OpenIAAdapter (online) o ai/local-emotions (offline).
+  - data/mappers.ts normaliza a grafo; systems/GraphBuilder + RuleEngine + ClusterEngine ajustan pesos, reglas y clusters.
+  - DOM: scene/dom/Vizualizer.tsx aplica presets.
+  - WebGL: scene/r3f/R3FCanvas.tsx + scene/r3f/ClustersScene.tsx renderizan planetas, enlaces y Planeta Blend.
 
 ### Estructura de carpetas principal
 
@@ -93,52 +92,52 @@ src/
 - main.tsx
 - App.tsx
 - features/
-    - prompt/
-        - PromptInput.tsx
+  - prompt/
+    - PromptInput.tsx
 - hooks/
-    - useEmotionCoordinator.ts
-    - useEmotionVisuals2.ts
-    - useBlendLeva.ts
-    - useVisualLeva.ts
-    - useAudioLeva.ts
+  - useEmotionCoordinator.ts
+  - useEmotionVisuals2.ts
+  - useBlendLeva.ts
+  - useVisualLeva.ts
+  - useAudioLeva.ts
 - services/
-    - EmotionServiceFactory.ts
-    - OpenIAAdapter.ts
-    - universeGraph.ts
+  - EmotionServiceFactory.ts
+  - OpenIAAdapter.ts
+  - universeGraph.ts
 - ai/
-    - local-emotions.ts
+  - local-emotions.ts
 - systems/
-    - GraphBuilder.ts
-    - RuleEngine.ts
-    - ClusterEngine.ts
+  - GraphBuilder.ts
+  - RuleEngine.ts
+  - ClusterEngine.ts
 - data/
-    - mappers.ts
+  - mappers.ts
 - state/
-    - universe.store.ts
+  - universe.store.ts
 - stores/
-    - ...stores de UI y flags
+  - ...stores de UI y flags
 - scene/
-    - dom/
-        - Vizualizer.tsx
-    - r3f/
-        - R3FCanvas.tsx
-        - ClustersScene.tsx
-        - UniverseScene.tsx (alternativa para grafo completo)
-        - objects/
-            - Planets.tsx (Planeta Blend)
-        - utils/
-            - ...helpers de geometría, materiales, layout
+  - dom/
+    - Vizualizer.tsx
+  - r3f/
+    - R3FCanvas.tsx
+    - ClustersScene.tsx
+    - UniverseScene.tsx (alternativa para grafo completo)
+    - objects/
+      - Planets.tsx (Planeta Blend)
+    - utils/
+      - ...helpers de geometría, materiales, layout
 - config/
-    - config.ts (AUDIO/TEXTURES/intro/flags)
-    - emotion-presets.ts
-    - emotion-clusters.ts
+  - config.ts (AUDIO/TEXTURES/intro/flags)
+  - emotion-presets.ts
+  - emotion-clusters.ts
 - utils/
-    - validators.ts (Zod)
-    - iaUtiils.ts (parser permisivo)
-    - logger.ts
+  - validators.ts (Zod)
+  - iaUtiils.ts (parser permisivo)
+  - logger.ts
 - ui/
-    - components/
-        - MainScreen.tsx
+  - components/
+    - MainScreen.tsx
 - assets/ (opcional; texturas/audio suelen referenciarse desde config)
 - styles/ (si aplica)
 
@@ -146,11 +145,11 @@ src/
 
 - Modo de análisis: VITE_EMOTION_MODE=online|offline|auto (auto si hay VITE_OPENAI_API_KEY).
 - EmotionServiceFactory expone:
-    - emotionService.analyze, analyzeMulti, analyzeToGraph.
-    - Re‑balanceo en cliente: sintetiza 1–2 enlaces cross‑cluster si falta cruce.
+  - emotionService.analyze, analyzeMulti, analyzeToGraph.
+  - Re‑balanceo en cliente: sintetiza 1–2 enlaces cross‑cluster si falta cruce.
 - Payload IA/local v1:
-    - emotions[]: { id?, label, valence[-1..1], arousal[0..1], intensity|weight, colors?, relations? }
-    - pairs[], global?
+  - emotions[]: { id?, label, valence[-1..1], arousal[0..1], intensity|weight, colors?, relations? }
+  - pairs[], global?
 - data/mappers.ts → { emotions, links } para ClustersScene.
 - Validación: Zod estricto + parser permisivo (utils/validators.ts, utils/iaUtiils.ts).
 
@@ -162,33 +161,25 @@ src/
 
 - Primer prototipo: solo cambiaba el fondo según el tono.
 - Aprendí sobre latencia IA y suavizado de transición.
-    
-    ![Fase 1](./docs/fase1.gif)
-    
+  ![Fase 1](./docs/fase1.gif)
 
 ### ⚡ Fase 2 – Motion + Layers
 
 - Agregué **Framer Motion** para simular ritmo emocional.
 - Introduje **“motion profiles”** según la energía (Arousal).
-    
-    ![Fase 2](./docs/fase2.gif)
-    
+  ![Fase 2](./docs/fase2.gif)
 
 ### 🌈 Fase 3 – Emotion Blending
 
 - Permitir mezcla entre emociones (alegría + nostalgia → cálido/sepia).
 - Mejora del mapeo visual + inspector lateral.
-    
-    ![Fase 3](./docs/fase3.gif)
-    
+  ![Fase 3](./docs/fase3.gif)
 
 ### 🌈 Fase 4 – R3F introduccion
 
 - Permitir mezcla entre emociones (alegría + nostalgia → cálido/sepia).
 - Mejora del mapeo visual + inspector lateral.
-    
-    ![Screenshot 2025-10-23 001551.png](attachment:9b379652-47b5-480d-8957-894e1aae8876:Screenshot_2025-10-23_001551.png)
-    
+  ![Screenshot 2025-10-23 001551.png](attachment:9b379652-47b5-480d-8957-894e1aae8876:Screenshot_2025-10-23_001551.png)
 
 ### 🌈 Fase 3 – Emotion Blending
 
@@ -249,17 +240,17 @@ Ejemplos (extractos):
 export type Emotion = {
   id: string;
   label: string;
-  valence: number;   // -1..1
-  arousal: number;   // 0..1
-  weight: number;    // 0..1 (intensity normalizada)
+  valence: number; // -1..1
+  arousal: number; // 0..1
+  weight: number; // 0..1 (intensity normalizada)
   colors?: string[]; // opcional, hex
   relations?: string[];
 };
 
 export type Link = {
-  source: string;    // id/label
+  source: string; // id/label
   target: string;
-  weight: number;    // 0..1
+  weight: number; // 0..1
   kind?: 'cooccur' | 'cross' | 'model';
 };
 
@@ -283,23 +274,31 @@ export const emotionZ = z.object({
   arousal: z.number().gte(0).lte(1),
   weight: z.number().gte(0).lte(1),
   colors: z.array(z.string()).optional(),
-  relations: z.array(z.string()).optional(),
+  relations: z.array(z.string()).optional()
 });
 
 export const payloadV1Z = z.object({
   version: z.literal(1),
-  emotions: z.array(emotionZ.partial({ id: true, colors: true, relations: true }).extend({
-    label: z.string().min(1),
-  })),
-  pairs: z.array(z.object({
-    a: z.string().min(1),
-    b: z.string().min(1),
-    weight: z.number().gte(0).lte(1).optional(),
-  })).optional(),
-  global: z.object({
-    dominant: z.string().optional(),
-    sentiment: z.number().gte(-1).lte(1).optional(),
-  }).optional(),
+  emotions: z.array(
+    emotionZ.partial({ id: true, colors: true, relations: true }).extend({
+      label: z.string().min(1)
+    })
+  ),
+  pairs: z
+    .array(
+      z.object({
+        a: z.string().min(1),
+        b: z.string().min(1),
+        weight: z.number().gte(0).lte(1).optional()
+      })
+    )
+    .optional(),
+  global: z
+    .object({
+      dominant: z.string().optional(),
+      sentiment: z.number().gte(-1).lte(1).optional()
+    })
+    .optional()
 });
 
 export function safeParsePayload(input: unknown) {
@@ -316,14 +315,14 @@ export function safeParsePayload(input: unknown) {
         arousal: Number(e.arousal ?? e.energy ?? 0.5),
         weight: Number(e.weight ?? e.intensity ?? 0.6),
         colors: e.colors,
-        relations: e.relations,
+        relations: e.relations
       })),
       pairs: (j.pairs ?? j.links ?? []).map((p: any) => ({
         a: String(p.a ?? p.source),
         b: String(p.b ?? p.target),
-        weight: Number(p.weight ?? p.confidence ?? 0.5),
+        weight: Number(p.weight ?? p.confidence ?? 0.5)
       })),
-      global: j.global,
+      global: j.global
     });
   } catch {
     throw r.error;
@@ -335,17 +334,17 @@ export function safeParsePayload(input: unknown) {
 export type Emotion = {
   id: string;
   label: string;
-  valence: number;   // -1..1
-  arousal: number;   // 0..1
-  weight: number;    // 0..1 (intensity normalizada)
+  valence: number; // -1..1
+  arousal: number; // 0..1
+  weight: number; // 0..1 (intensity normalizada)
   colors?: string[]; // opcional, hex
   relations?: string[];
 };
 
 export type Link = {
-  source: string;    // id/label
+  source: string; // id/label
   target: string;
-  weight: number;    // 0..1
+  weight: number; // 0..1
   kind?: 'cooccur' | 'cross' | 'model';
 };
 
@@ -375,9 +374,12 @@ export type EmotionService = {
 function synthesizeCrossLinks(graph: GraphData): GraphData {
   if (graph.links.length >= 2 || graph.emotions.length < 2) return graph;
   const sorted = [...graph.emotions].sort((a, b) => b.weight - a.weight);
-  const a = sorted[0], b = sorted[1];
-  const exists = graph.links.some(l =>
-    (l.source === a.label && l.target === b.label) || (l.source === b.label && l.target === a.label),
+  const a = sorted[0],
+    b = sorted[1];
+  const exists = graph.links.some(
+    (l) =>
+      (l.source === a.label && l.target === b.label) ||
+      (l.source === b.label && l.target === a.label)
   );
   if (!exists) {
     graph.links.push({ source: a.label, target: b.label, weight: 0.35, kind: 'cross' });
@@ -397,14 +399,14 @@ export function EmotionServiceFactory(): EmotionService {
       return safeParsePayload(raw) as AnalysisPayloadV1;
     },
     async analyzeMulti(prompts, signal) {
-      const res = await Promise.all(prompts.map(p => this.analyze(p, signal)));
+      const res = await Promise.all(prompts.map((p) => this.analyze(p, signal)));
       return res;
     },
     async analyzeToGraph(prompt, signal) {
       const payload = await this.analyze(prompt, signal);
       const graph = mapToGraph(payload);
       return synthesizeCrossLinks(graph);
-    },
+    }
   };
 }
 ```
@@ -418,13 +420,13 @@ export function OpenIAAdapter() {
   const openai = new OpenAI({
     apiKey: import.meta.env.VITE_OPENAI_API_KEY,
     baseURL: import.meta.env.VITE_OPENAI_BASE_URL,
-    dangerouslyAllowBrowser: true,
+    dangerouslyAllowBrowser: true
   });
 
   const system = [
     'Eres un analizador emocional.',
     'Responde SÓLO JSON válido con schema {version:1, emotions[], pairs[], global?}.',
-    'Emoción: {label, valence[-1..1], arousal[0..1], weight[0..1], colors?}.',
+    'Emoción: {label, valence[-1..1], arousal[0..1], weight[0..1], colors?}.'
   ].join(' ');
 
   function buildUser(prompt: string) {
@@ -437,11 +439,17 @@ export function OpenIAAdapter() {
       JSON.stringify({
         version: 1,
         emotions: [
-          { label: 'joy', valence: 0.8, arousal: 0.6, weight: 0.7, colors: ['#FFD93D', '#FF6B00'] },
-          { label: 'calm', valence: 0.4, arousal: 0.2, weight: 0.5 },
+          {
+            label: 'joy',
+            valence: 0.8,
+            arousal: 0.6,
+            weight: 0.7,
+            colors: ['#FFD93D', '#FF6B00']
+          },
+          { label: 'calm', valence: 0.4, arousal: 0.2, weight: 0.5 }
         ],
-        pairs: [{ a: 'joy', b: 'calm', weight: 0.4 }],
-      }),
+        pairs: [{ a: 'joy', b: 'calm', weight: 0.4 }]
+      })
     ].join('\n');
   }
 
@@ -453,14 +461,14 @@ export function OpenIAAdapter() {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: buildUser(prompt) },
+          { role: 'user', content: buildUser(prompt) }
         ],
         // @ts-ignore
-        signal,
+        signal
       });
       const content = resp.choices[0]?.message?.content ?? '{}';
       return JSON.parse(content);
-    },
+    }
   };
 }
 ```
@@ -469,25 +477,57 @@ export function OpenIAAdapter() {
 import { AnalysisPayloadV1 } from '@/core/types';
 
 const LEX = [
-  { label: 'joy', valence: 0.8, arousal: 0.6, kw: ['feliz','alegr','sonr','sun','luz','logré'] },
-  { label: 'calm', valence: 0.4, arousal: 0.2, kw: ['paz','calma','quiet','sereno','respirar'] },
-  { label: 'anger', valence: -0.7, arousal: 0.8, kw: ['enojo','rabia','ira','molest','romper'] },
-  { label: 'sadness', valence: -0.6, arousal: 0.4, kw: ['triste','lloro','perdí','vacío','solo'] },
-  { label: 'fear', valence: -0.8, arousal: 0.9, kw: ['miedo','pánico','temor','sombra','amenaza'] },
-  { label: 'love', valence: 0.7, arousal: 0.5, kw: ['amor','cariño','abraz','querer','te amo'] },
+  {
+    label: 'joy',
+    valence: 0.8,
+    arousal: 0.6,
+    kw: ['feliz', 'alegr', 'sonr', 'sun', 'luz', 'logré']
+  },
+  {
+    label: 'calm',
+    valence: 0.4,
+    arousal: 0.2,
+    kw: ['paz', 'calma', 'quiet', 'sereno', 'respirar']
+  },
+  {
+    label: 'anger',
+    valence: -0.7,
+    arousal: 0.8,
+    kw: ['enojo', 'rabia', 'ira', 'molest', 'romper']
+  },
+  {
+    label: 'sadness',
+    valence: -0.6,
+    arousal: 0.4,
+    kw: ['triste', 'lloro', 'perdí', 'vacío', 'solo']
+  },
+  {
+    label: 'fear',
+    valence: -0.8,
+    arousal: 0.9,
+    kw: ['miedo', 'pánico', 'temor', 'sombra', 'amenaza']
+  },
+  {
+    label: 'love',
+    valence: 0.7,
+    arousal: 0.5,
+    kw: ['amor', 'cariño', 'abraz', 'querer', 'te amo']
+  }
 ];
 
 export async function localAnalyze(prompt: string): Promise<AnalysisPayloadV1> {
   const text = prompt.toLowerCase();
-  const hits = LEX.map(e => {
+  const hits = LEX.map((e) => {
     const score = e.kw.reduce((s, k) => s + (text.includes(k) ? 1 : 0), 0);
     return score > 0 ? { ...e, weight: Math.min(0.35 + score * 0.15, 1) } : null;
   }).filter(Boolean) as any[];
 
-  const emotions = (hits.length ? hits : [{ label: 'calm', valence: 0.2, arousal: 0.2, weight: 0.4 }])
-    .map(e => ({ label: e.label, valence: e.valence, arousal: e.arousal, weight: e.weight }));
+  const emotions = (
+    hits.length ? hits : [{ label: 'calm', valence: 0.2, arousal: 0.2, weight: 0.4 }]
+  ).map((e) => ({ label: e.label, valence: e.valence, arousal: e.arousal, weight: e.weight }));
 
-  const pairs = emotions.length >= 2 ? [{ a: emotions[0].label, b: emotions[1].label, weight: 0.35 }] : [];
+  const pairs =
+    emotions.length >= 2 ? [{ a: emotions[0].label, b: emotions[1].label, weight: 0.35 }] : [];
 
   return { version: 1, emotions, pairs };
 }
@@ -504,24 +544,26 @@ export function mapToGraph(payload: AnalysisPayloadV1): GraphData {
     arousal: clamp(e.arousal ?? 0.5, 0, 1),
     weight: clamp(e.weight ?? e['intensity'] ?? 0.6, 0, 1),
     colors: e.colors,
-    relations: e.relations,
+    relations: e.relations
   }));
 
-  const links: Link[] = (payload.pairs ?? []).map(p => ({
+  const links: Link[] = (payload.pairs ?? []).map((p) => ({
     source: p.a,
     target: p.b,
     weight: clamp(p.weight ?? 0.4, 0, 1),
-    kind: 'model',
+    kind: 'model'
   }));
 
   // normalización simple de pesos relativos
-  const maxW = Math.max(...emotions.map(e => e.weight), 0.001);
-  emotions.forEach(e => (e.weight = clamp(e.weight / maxW, 0.05, 1)));
+  const maxW = Math.max(...emotions.map((e) => e.weight), 0.001);
+  emotions.forEach((e) => (e.weight = clamp(e.weight / maxW, 0.05, 1)));
 
   return { emotions, links };
 }
 
-function clamp(n: number, a: number, b: number) { return Math.max(a, Math.min(b, n)); }
+function clamp(n: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, n));
+}
 ```
 
 ```tsx
@@ -531,7 +573,7 @@ import { useUniverseStore } from '@/state/universe.store';
 
 export function useEmotionCoordinator() {
   const service = useMemo(() => EmotionServiceFactory(), []);
-  const setGraph = useUniverseStore(s => s.setGraph);
+  const setGraph = useUniverseStore((s) => s.setGraph);
   const [thinking, setThinking] = useState(false);
   const ctl = useRef<AbortController | null>(null);
 
@@ -571,7 +613,9 @@ const emotionService = EmotionServiceFactory();
 const res = await emotionService.analyze('Me siento en paz pero con un nudo en el estómago.');
 // -> payload v1 validado
 
-const graph = await emotionService.analyzeToGraph('Una mezcla de alegría y miedo por lo que viene.');
+const graph = await emotionService.analyzeToGraph(
+  'Una mezcla de alegría y miedo por lo que viene.'
+);
 // -> { emotions, links } listo para ClustersScene
 ```
 
@@ -648,7 +692,5 @@ Este proyecto fue un ejercicio de:
 - **Sistemas reusables:** diseñar un motor adaptable a futuros proyectos sensoriales.
 
 > “La emoción se volvió código.
-> 
-> 
-> El código, una forma de sentir.”
 >
+> El código, una forma de sentir.”

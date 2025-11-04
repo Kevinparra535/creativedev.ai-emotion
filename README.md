@@ -1,81 +1,50 @@
-!["Emotion Universe cover"](docs/readme_cover.png)
-
 # CreativeDev: Emotion Universe · [Live demo](https://labs-ai-emotion.web.app/)
 
-![R3F](https://img.shields.io/badge/R3F-React%20Three%20Fiber-black)
-![WebGL2](https://img.shields.io/badge/WebGL2-FBO-blue)
-![License: MIT](https://img.shields.io/badge/License-MIT-green)
+!["Emotion Universe cover"](docs/readme_cover.png)
 
-Text you write becomes motion you see. The app turns text into real‑time emotional visuals: a DOM visualizer (gradients + micro‑animations) now, and a 3D emotional galaxy (R3F) with planets, orbits, links, audio, and a Blend Planet planned next.
+## Why this exists
 
-This README covers essentials; detailed docs live in [docs/](docs/README.md).
+Text you write becomes motion you see. This lab explores a single pipeline from text → emotion graph → synchronized DOM and WebGL visuals, with low latency and clear “why” behind every motion. The goal: expressive, explainable visuals that feel immediate and honest.
 
-## Features
+## Stack
 
-- Real‑time emotion analysis with debounce and cancellation (smooth UX)
-- Local heuristic by default; optional OpenAI integration ready
-- Prompt highlighting: keywords get animated gradient spans (safe overlay)
-- Visual presets per emotion: colors + motion style + grain
-- Leva control panel with live sliders (intensity, speed, grain) and Save/Share actions
-- Clean build/tooling: Vite 7 (SWC), ESLint flat config, Prettier; `@` alias → `src`
+- React 19 + TypeScript + Vite 7 (SWC; `rolldown-vite@7.1.14` override)
+- React Three Fiber (@react-three/fiber, @react-three/drei), lightweight PostFX
+- Zustand (state), Leva (controls), styled-components (UI)
+- Validation/parsing: Zod, permissive parser utilities
+- Optional OpenAI (online) + local heuristic (offline)
 
-## How it works
+## Creative Goals
 
-- Flow: `PromptInput` → `useEmotionEngine` → `openIAService.analyzeText` → `emotion-presets` → `Vizualizer`
-- Key files:
-	- `src/features/prompt/PromptInput.tsx`: text area + highlight overlay
-	- `src/hooks/useEmotionEngine.ts`: debounce + AbortController, exposes `{ emotion, analyzing }`
-	- `src/services/openIAService.ts`: local heuristic + OpenAI‑ready parser
-	- `src/config/emotion-presets.ts`: `label → { colors, motion, particles }`
-	- `src/scene/dom/Vizualizer.tsx`: gradient background + motion per preset + grain overlay
-	- `src/ui/components/Canvas.tsx`: intro animation, loader “Reading your tone…”, Leva
+- Map natural language to an emotion graph and make it perceptible in <1s.
+- Synchronize DOM gradients/micro-animations with R3F planets, links and the Blend Planet.
+- Achieve explainability: valence/arousal drive palette, motion and particle density.
+- Prove a single IA service can serve both online (OpenAI) and offline (heuristic) modes.
 
-## Tech stack
+## What I learned
 
-- React 19 + TypeScript + Vite 7 (SWC)
-- styled‑components, Framer Motion
-- Optional: Three.js with React Three Fiber (@react-three/fiber, @react-three/drei), lightweight PostFX
-- State: Zustand; Controls: Leva
-
-## Quick start
-
-- Dev: `npm run dev`
-- Build: `npm run build`
-- Preview: `npm run preview`
-
-## Configuration
-
-- Use `import.meta.env` with `VITE_*` keys (don’t expose `process.env`):
-	- `VITE_OPENAI_API_KEY` (optional)
-	- `VITE_OPENAI_BASE_URL` (optional; default `https://api.openai.com/v1`)
-	- `VITE_OPENAI_MODEL` (optional; default `gpt-4o-mini`)
-- See `src/config/config.ts` and `env_template`.
-- Vite is pinned to `rolldown-vite@7.1.14` in `package.json`.
-
-## Project structure (key paths)
-
-```
-src/
-	features/prompt/PromptInput.tsx   # highlight overlay + textarea
-	hooks/useEmotionEngine.ts         # debounce + cancel + state
-	services/openIAService.ts         # local heuristic + parser
-	config/emotion-presets.ts         # emotion → visual preset
-	scene/dom/Vizualizer.tsx          # DOM visualizer (gradients + motion)
-	ui/components/Canvas.tsx          # orchestration + Leva + loader
-```
+- Debounce + cancellation are crucial to avoid visual “bouncing” and perceived jank.
+- One WebGL canvas keeps 60fps smoother than multiple layers; PostFX must be restrained.
+- Normalizing weights and injecting cross-cluster links increases perceived cohesion.
+- Biggest fail: stale README paths; fixed by aligning docs to current codebase and contracts.
 
 ## Roadmap
 
-- Implemented (DOM‑first): prompt overlay, emotion engine, presets, Leva controls
-- Next (R3F): single canvas, ClustersScene (planets/satellites/links), Blend Planet, PostFX
-- Future: audio‑reactive visuals (WebAudio), multi‑emotion blending, snapshots/sharing, WebGPU exploration
+- v1: Unified IA pipeline (`services/EmotionServiceFactory.ts`), `scene/r3f/ClustersScene.tsx`, DOM visualizer, Leva hooks.
+- v1.5: Export (PNG/short MP4), URL-shareable presets, first audio-reactivity pass.
+- v2: Rich multi-emotion blending (RuleEngine-driven), preset editor, collaborative sharing.
 
-## Documentation
+## Creative Manifesto
 
-- Docs index: [docs/README.md](docs/README.md)
-- Architecture: [docs/architecture.md](docs/architecture.md)
-- Data contracts: [docs/data-contracts.md](docs/data-contracts.md)
+This lab has a creative manifesto → [MANIFESTO.md](docs/MANIFESTO.md)
 
-## License & credits
+---
 
-MIT License. Audio, textures, and shader techniques draw inspiration from the R3F community and Three.js examples.
+Key implementation references (kept short, see `docs/` for deep dive):
+
+- Input to analysis: `features/prompt/PromptInput.tsx` → `hooks/useEmotionCoordinator.ts` (350–450ms debounce + AbortController)
+- IA Service: `services/EmotionServiceFactory.ts` selects `services/OpenIAAdapter.ts` (online) or `ai/local-emotions.ts` (offline)
+- Mapping: `data/mappers.ts` → `{ emotions, links }` → `state/universe.store.ts`
+- DOM visuals: `scene/dom/Vizualizer.tsx` + `config/emotion-presets.ts`
+- R3F: `scene/r3f/R3FCanvas.tsx` + `scene/r3f/ClustersScene.tsx` (planets/orbits/links + Blend Planet)
+- Config/env: `src/config/config.ts`, `env_template` (use `import.meta.env.VITE_*`)
